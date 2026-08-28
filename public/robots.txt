@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://workbook-constellation.sociobot.in/sitemap.xml
