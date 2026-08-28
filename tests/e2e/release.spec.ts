@@ -41,3 +41,19 @@ test('shows a calm release-page fallback when no release exists', async ({ page 
   );
   expect(pageErrors).toEqual([]);
 });
+
+test('service worker update removes the previous shell cache', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.evaluate(async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration => registration.unregister()));
+    await caches.open('workbook-constellation-v2');
+  });
+
+  await page.reload();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(async () => !(await caches.keys()).includes('workbook-constellation-v2'));
+
+  expect(await page.evaluate(() => caches.keys())).toContain('workbook-constellation-v3');
+});

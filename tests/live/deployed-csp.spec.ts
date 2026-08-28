@@ -27,5 +27,12 @@ test('deployed CSP permits the CORS-safe release lookup with no console errors',
     'href',
     /github\.com\/.+\/releases\/download\//
   );
+
+  for (const path of ['/demo', '/privacy', '/terms']) {
+    await page.goto(path, { waitUntil: 'networkidle' });
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('main')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveCount(1);
+  }
   expect(errors).toEqual([]);
 });
