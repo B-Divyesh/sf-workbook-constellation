@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest';
+import * as XLSX from 'xlsx';
+import { auditWorkbook, buildAudit, parseFormula } from '../src/parser';
+
+describe('formula parser', () => {
+  it('extracts quoted sheets, ranges, and external links', () => {
+    const parsed = parseFormula("SUM('Sales plan'!$B$2:$B$9)+[old.xlsx]Inputs!C4", 'Summary');
+    expect(parsed.precedents).toEqual([
+      { sheet: 'Sales plan', ref: '$B$2:$B$9', external: undefined },
+      { sheet: 'Inputs', ref: 'C4', external: 'old.xlsx' }
+    ]);
+    expect(parsed.warnings).toContain('external');
+  });
+
+  it('flags opaque formulas', () => {
+    expect(parseFormula('INDIRECT(A1&"!B2")', 'Summary').warnings).toContain('opaque');
+  });
+
+  it('@claim:read-only-boundaries reports formulas without evaluating macro content', () => {
+    const book = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([[''], ['macro-like text: Shell("bad")']]);
+    sheet.A1 = { t: 'n', f: 'Input!A1' };
+    XLSX.utils.book_append_sheet(book, sheet, 'Summary');
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[42]]), 'Input');
+    const bytes = XLSX.write(book, { type: 'array', bookType: 'xlsx' });
+    const result = auditWorkbook(bytes, 'safe.xlsx');
+    expect(result.formulas[0].formula).toBe('=Input!A1');
+    expect(result).not.toHaveProperty('calculatedValues');
+    expect(JSON.stringify(result)).not.toContain('Shell("bad")');
+  });
+
+  it('detects a cross-sheet cycle', () => {
+    const result = buildAudit('cycle.xlsx', ['A', 'B'], [
+      { sheet: 'A', cell: 'A1', formula: '=B!A1', precedents: [{ sheet: 'B', ref: 'A1' }], warnings: [] },
+      { sheet: 'B', cell: 'A1', formula: '=A!A1', precedents: [{ sheet: 'A', ref: 'A1' }], warnings: [] }
+    ]);
+    expect(result.warnings.filter(w => w.kind === 'circular')).toHaveLength(2);
+  });
+});

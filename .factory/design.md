@@ -14,7 +14,7 @@ The application itself is a quiet instrument panel set below that scene. It uses
 - Slate `#4D5A60`: secondary text; verified at 4.5:1 on paper.
 - Signal cyan `#087E8B`: actions, focus, and selected dependency paths.
 - Vermilion `#BC3A2D`: external, circular, or opaque warnings.
-- Brass `#A66A19`: formula and caution accents.
+- Brass `#6B4108`: formula and caution accents with accessible contrast on paper.
 - Moss `#337055`: safe/local status.
 
 The product is deliberately single-mode. Its ink-and-paper contrast is part of the editorial premise, while the graph canvas uses the dark night field.
@@ -50,4 +50,3 @@ Prompt sheet:
 > Use case: stylized-concept. Asset type: wide landing-page hero and social crop. Primary request: a surreal editorial still life where an open accounting workbook becomes a midnight topographic landscape; layered paper worksheet tabs rise like small islands and fine copper threads connect them as a precise constellation. Scene/backdrop: quiet archive observatory, no people. Style/medium: tactile cut-paper editorial illustration with subtle photographic material detail, restrained and sophisticated. Composition: wide 3:2 view, primary cluster on the right, calm negative space on the left, clear focal depth. Lighting: one warm brass task lamp against deep blue-black shadow. Palette: night ink, ledger ivory, oxidized cyan, vermilion pin marks, muted brass. Materials: deckled paper, graphite rules, copper wire, frosted glass. Constraints: no readable text, no formulas, no logos, no brands, no watermark, no hands, no faces, no UI screenshot. Avoid: generic gradients, neon sci-fi, glowing orbs, stock-office imagery, illegible pseudo-text, clutter.
 
 Generated with the factory image model on 2026-08-28. The selected source and prompt sidecar live in `assets/src/`; optimized derivatives live in `public/art/`. Generated imagery is original to this product.
-
