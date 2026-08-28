@@ -2,21 +2,37 @@
 
 ## Release status: **FAIL**
 
-Independent QA of candidate `5e26f1cda928ec293f2b209f760e9f8c756f27ad` against https://workbook-constellation.sociobot.in on 2026-08-28 found release-blocking defects. Do not promote this candidate.
+Independent QA of candidate `5e26f1cda928ec293f2b209f760e9f8c756f27ad`
+against <https://workbook-constellation.sociobot.in> on 2026-08-28 found
+release-blocking defects. Do not promote this candidate. Full reports are
+`.factory/verification.md` and `.factory/verification-2.md`.
 
-- **High:** untrusted workbook formula text is rendered as document markup in the interactive audit view. A generated XLSX with markup-shaped formula text created an `img` element and altered the formula evidence. See `.factory/verification.md` for the reproduction and affected rendering sites in `src/main.ts`.
-- **Release blocker:** public landing/README claims exceed the six entries in `.factory/claims.json`, so they are not all sandbox-tested as required by the claims contract.
-- **Medium:** hashed deployed assets use `Cache-Control: public, must-revalidate, max-age=30`, not immutable caching.
-- **Low:** malformed `.xlsx` content is reported as “No formulas were found” instead of an unreadable/damaged workbook.
+- **High:** untrusted formula text is rendered as document markup in the audit
+  UI; the earlier verification reproduced a workbook-controlled `img` element.
+- **Release blocker:** public relied-on statements exceed the six claim entries
+  in `.factory/claims.json`, so they are not all sandbox-tested.
+- **High:** an unknown live URL returns HTTP 200 instead of a real 404.
+- **Medium:** fingerprinted deployed assets use only `Cache-Control:
+  public, must-revalidate, max-age=30`, not immutable caching.
+- **Medium:** the persistent 390px demo controls Reset demo and Start for real
+  are 34px high, below the 44px touch-target requirement.
+- **Low:** malformed `.xlsx` content reports “No formulas were found” rather
+  than an unreadable/damaged workbook.
 
-The prior deployment-only CSP issue is resolved: fresh live testing confirmed the GitHub metadata lookup, correct `connect-src`, no browser errors, and a live JS SHA-256 identical to the candidate build. All six declared claim tests, the full unit/E2E suite, site build, live suite, accessibility checks, normal/demo flows, privacy checks, and license-endpoint rate-limit check passed. Full commands, outputs, scope, and evidence are in `.factory/verification.md`.
+The deployment-only CSP issue is resolved: fresh live testing confirmed the
+GitHub metadata lookup, correct `connect-src`, no browser errors, and a live
+JS SHA-256 identical to the candidate build. Declared claims, full unit/E2E
+suite, site/app builds, live suite, accessibility checks, normal/demo flows,
+privacy checks, release checksum, and license-endpoint rate limit otherwise
+passed.
 
 ## Required repair and re-verification
 
-1. Render all workbook-controlled values as text in the audit UI and add regression tests.
-2. Add claim records/tests for every public relied-on statement or remove those statements.
-3. Add immutable caching for fingerprinted assets and correct malformed-file messaging.
-4. Deploy a new candidate and rerun the independent verification.
+1. Render every workbook-controlled value as text and add a regression test.
+2. Add tests for all public claims or remove the untestable statements.
+3. Return HTTP 404 for unknown routes; apply immutable caching to hashed files;
+   make demo controls at least 44px high; correct malformed-file messaging.
+4. Deploy a new candidate and rerun independent verification.
 
 ---
 
