@@ -22,6 +22,7 @@ npm run build:site
 ```
 
 The deploy command is exactly `npm run build:site`. Static output lands in `dist/site/`, with `index.html` at that root.
+After deployment, `npm run test:live` checks the production CSP, GitHub release metadata response, platform download link, and browser console.
 
 Build the desktop app with:
 
