@@ -20,7 +20,7 @@ npm test
 npm run build:site
 ```
 
-`npm test` passed on 2026-08-28: 4 unit tests and 7 Playwright tests. All five claim tests in `.factory/claims.json` passed. The browser suite also passed Axe serious/critical checks on `/`, `/demo`, `/privacy`, and `/terms`, plus the 390px keyboard/error path.
+`npm test` passed on 2026-08-28: 4 unit tests and 7 Playwright tests. All six claim tests in `.factory/claims.json` passed. The browser suite also passed Axe serious/critical checks on `/`, `/demo`, `/privacy`, and `/terms`, plus the 390px keyboard/error path.
 
 `npm run build:site` passed. Deploy output is `dist/site/`; its root contains `index.html`. Production payload sizes were 128.37 KB gzip JavaScript, 3.36 KB gzip CSS, and 32 KB for the mobile hero WebP.
 
@@ -51,13 +51,17 @@ The full machine-readable result is `.factory/lighthouse.json`.
 - Structured references, 3D references, defined names, add-in formulas, and locale-specific formula dialects may be incomplete. These limits are stated in the README.
 - Circular detection is structural across sheets. It does not attempt Excel’s calculation semantics.
 - A local Rust check could not complete in this worker because GLib/WebKit development packages are absent. The release workflow installs the required Linux packages before the Tauri build.
-- No GitHub Release existed while the site was built, so the landing page correctly shows “Downloads are being published” until the tagged workflow finishes.
+
+## Release verification
+
+Tag `v0.1.0` produced a successful four-target workflow run. The published release contains macOS arm64 and x86_64 DMGs, Windows MSI and EXE installers, Linux AppImage/DEB/RPM packages, macOS app archives, `SHA256SUMS`, and `latest.json`.
+
+The Windows MSI was downloaded from the public release and passed `sha256sum -c`. The public `latest.json` parses and identifies `v0.1.0` with all platform assets.
 
 ## Needs operator action
 
-1. Push the `v0.1.0` tag and let `.github/workflows/release.yml` finish. Verify the macOS, Windows, Linux, `SHA256SUMS`, and `latest.json` assets on the release page.
-2. Register `workbook-constellation` with the Sociobot billing system at $19 one-time before promoting checkout.
-3. Builds are intentionally unsigned. Signing later requires operator certificates. Suggested repository secrets are `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`, `WINDOWS_CERT_PFX`, and `WINDOWS_CERT_PASSWORD`; the workflow must then be extended to consume them. It currently requires only GitHub’s automatic `GITHUB_TOKEN`.
+1. Register `workbook-constellation` with the Sociobot billing system at $19 one-time before promoting checkout.
+2. Builds are intentionally unsigned. Signing later requires operator certificates. Suggested repository secrets are `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`, `WINDOWS_CERT_PFX`, and `WINDOWS_CERT_PASSWORD`; the workflow must then be extended to consume them. It currently requires only GitHub’s automatic `GITHUB_TOKEN`.
 
 ## Asset provenance
 
