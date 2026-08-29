@@ -1,6 +1,6 @@
 [package]
 name = "workbook-constellation"
-version = "0.1.0"
+version = "0.1.1"
 description = "Read-only XLSX formula dependency map"
 authors = ["Param Factory"]
 license = "MIT"

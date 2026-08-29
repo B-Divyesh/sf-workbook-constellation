@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-28. Counts treat hyphenated terms and numerals as one word. Headings, labels, buttons, and fragments are included for clarity. No line exceeds 22 words. No banned marketing word appears.
+Audited 2026-08-29. Counts treat hyphenated terms and numerals as one word. Headings, labels, buttons, and fragments are included for clarity. No line exceeds 22 words. No banned marketing word appears.
 
 | Copy | Words | Result |
 |---|---:|---|
@@ -32,7 +32,7 @@ Audited 2026-08-28. Counts treat hyphenated terms and numerals as one word. Head
 | The desktop build is unsigned. | 5 | pass |
 | Check its published SHA256 before opening it. | 7 | pass |
 | Audit larger workbooks for $19 once | 6 | pass |
-| One license adds unlimited sheets and JSON evidence export. | 9 | pass |
+| One license accepts workbooks above 8 sheets and adds JSON evidence export. | 12 | pass |
 | HTML handoff reports stay free. | 5 | pass |
 
 ## Terminology

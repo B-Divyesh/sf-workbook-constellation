@@ -36,3 +36,17 @@ test('deployed CSP permits the CORS-safe release lookup with no console errors',
   }
   expect(errors).toEqual([]);
 });
+
+test('deployed unknown routes keep HTTP 404 and versioned assets are immutable', async ({ page }) => {
+  const home = await page.goto('/', { waitUntil: 'networkidle' });
+  expect(home?.status()).toBe(200);
+  const script = await page.locator('script[type="module"]').getAttribute('src');
+  expect(script).toMatch(/^\/assets\/index-[A-Za-z0-9_-]+\.js$/);
+  const asset = await page.request.get(script!);
+  expect(asset.status()).toBe(200);
+  expect(asset.headers()['cache-control']).toBe('public, max-age=31536000, immutable');
+
+  const missing = await page.goto('/not-a-route', { waitUntil: 'networkidle' });
+  expect(missing?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'This sheet is not in the workbook' })).toBeVisible();
+});

@@ -4,7 +4,7 @@ Map workbook formulas before you change a cell.
 
 Workbook Constellation is for people inheriting operational or financial XLSX files. It reads formula records on the device, maps cross-sheet dependencies, flags risky formulas, and exports a static handoff report. It does not calculate cells, edit workbooks, run macros, or open external links.
 
-The free tier reads workbooks with up to eight sheets and exports HTML reports. Constellation Plus costs $19 once and adds unlimited sheets and JSON evidence export. Licenses use the Sociobot billing API; workbook contents never enter that request.
+The free tier reads workbooks with up to eight sheets and exports HTML reports. Constellation Plus costs $19 once, accepts workbooks above eight sheets, and adds JSON evidence export. Licenses use the Sociobot billing API; workbook contents never enter that request.
 
 ## Try the sandbox
 
@@ -32,7 +32,7 @@ npm run tauri build
 
 Desktop releases are built by `.github/workflows/release.yml`, not on the factory worker. A `v*` tag creates unsigned macOS, Windows, and Linux installers, then publishes `SHA256SUMS` and `latest.json`.
 
-After a release exists, the website offers detected-platform downloads. The verified helper commands are:
+After a release exists, the website offers detected-platform downloads and published checksums. The helper commands verify SHA-256 before keeping an installer:
 
 ```sh
 curl -fsSL https://workbook-constellation.sociobot.in/install.sh | sh

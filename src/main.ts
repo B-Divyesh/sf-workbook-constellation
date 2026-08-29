@@ -5,6 +5,7 @@ import { downloadJson, downloadReport } from './report';
 import { captureLicense, checkoutUrl, hasPaidLicense, saveLicense, verifyLicense } from './license';
 import type { Audit, SheetEdge } from './types';
 import { loadDownload } from './release';
+import { escapeHtml as text } from './html';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let audit: Audit | null = null;
@@ -21,7 +22,7 @@ function shell(content: string) {
   ${isDemo ? `<aside class="demo-bar" aria-label="Demo mode"><span><strong>Demo</strong> — sample data, nothing is saved</span><div><button data-action="reset-demo">Reset demo</button><button data-action="leave-demo">Start for real</button></div></aside>` : ''}
   <header class="site-header"><a class="wordmark" href="/" data-link>${icon}<span>Workbook<br>Constellation</span></a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/#how">How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>
   ${content}
-  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.0 · Original generated artwork</p></footer>`;
+  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.1 · Original generated artwork</p></footer>`;
 }
 
 function landing() {
@@ -31,7 +32,7 @@ function landing() {
       <div class="hero-copy"><p class="eyebrow">Read-only workbook map</p><h1 tabindex="-1">Map workbook formulas before you edit</h1><p class="lede">For people inheriting complex workbooks who need to trace cross-tab sources before making changes.</p>
       <div class="hero-actions"><button class="primary" data-action="sample">Try it with sample data</button><span>See a finished dependency map.</span></div>
       <ul class="facts"><li>Files stay on this device</li><li>Works without an account</li><li>Free for workbooks up to 8 sheets</li></ul></div>
-      <picture class="hero-art"><source type="image/webp" srcset="/art/hero-768.webp 768w, /art/hero-1200.webp 1200w" sizes="(max-width: 800px) 90vw, 52vw"><img src="/art/hero-1200.webp" width="1200" height="800" fetchpriority="high" alt="Paper workbook tabs linked like a constellation in a dark archive."></picture>
+      <picture class="hero-art"><source type="image/webp" srcset="/art/hero-768-9e3e4d45.webp 768w, /art/hero-1200-198ca62b.webp 1200w" sizes="(max-width: 800px) 90vw, 52vw"><img src="/art/hero-1200-198ca62b.webp" width="1200" height="800" fetchpriority="high" alt="Paper workbook tabs linked like a constellation in a dark archive."></picture>
     </section>
     <section class="workspace-shell" aria-labelledby="workspace-title"><div class="section-kicker">The instrument</div><h2 id="workspace-title">Open a workbook in read-only mode</h2><p>Choose an XLSX file. The report uses formula records only. It never runs macros or opens linked files.</p>
       <div class="drop-zone" id="drop-zone"><input id="file" type="file" accept=".xlsx,.xlsm" aria-describedby="file-help"><label class="primary" for="file">Choose an XLSX file</label><span id="file-help">or drop one here · 50 MB maximum</span></div><p id="file-status" class="status" role="status"></p>
@@ -40,7 +41,7 @@ function landing() {
     <section id="how" class="steps"><p class="section-kicker">How it works</p><h2>Three steps from file to handoff</h2><ol><li><b>1</b><h3>Open the workbook</h3><p>Choose an XLSX or XLSM file. Macro code is never run.</p></li><li><b>2</b><h3>Inspect the paths</h3><p>Trace tab links and review external, circular, or opaque formulas.</p></li><li><b>3</b><h3>Export the report</h3><p>Save a static HTML report for the workbook’s next owner.</p></li></ol></section>
     <section class="limits"><div><p class="section-kicker">Clear boundaries</p><h2>Structural proof, not calculated answers</h2></div><div><p>Workbook Constellation does not edit cells, calculate formulas, run macros, or open external links.</p><p>Encrypted files and formulas stored only inside unsupported add-ins cannot be read.</p></div></section>
     <section class="downloads" aria-labelledby="download-title"><div><p class="section-kicker">Desktop app</p><h2 id="download-title">Keep workbook audits on your computer</h2><p>The desktop build is unsigned. Check its published SHA256 before opening it.</p></div><div id="download-action" class="download-action" aria-live="polite"><span>Checking the latest release…</span></div></section>
-    <section class="price" aria-labelledby="price-title"><div><p class="eyebrow">Constellation Plus</p><h2 id="price-title">Audit larger workbooks for $19 once</h2><p>One license adds unlimited sheets and JSON evidence export. HTML handoff reports stay free.</p></div><a class="primary" href="${checkoutUrl}">Buy a $19 license</a><form id="license-form"><label for="license">Have a license?</label><div><input id="license" name="license" autocomplete="off" required><button type="submit">Verify license</button></div><p id="license-status" role="status"></p></form></section>
+    <section class="price" aria-labelledby="price-title"><div><p class="eyebrow">Constellation Plus</p><h2 id="price-title">Audit larger workbooks for $19 once</h2><p>One license accepts workbooks above 8 sheets and adds JSON evidence export. HTML handoff reports stay free.</p></div><a class="primary" href="${checkoutUrl}">Buy a $19 license</a><form id="license-form"><label for="license">Have a license?</label><div><input id="license" name="license" autocomplete="off" required><button type="submit">Verify license</button></div><p id="license-status" role="status"></p></form></section>
   </main>`);
 }
 
@@ -54,12 +55,12 @@ function graphMarkup(item: Audit) {
     const a = positions.get(edge.from), b = positions.get(edge.to);
     if (!a || !b) return '';
     const active = !selectedSheet || edge.from === selectedSheet || edge.to === selectedSheet;
-    return `<button class="edge-hit ${active ? 'active' : ''}" data-edge="${i}" aria-label="${edge.from} to ${edge.to}, ${edge.count} references" style="--mx:${(a.x + b.x) / 2 + 70}px;--my:${(a.y + b.y) / 2 + 28}px"></button><svg class="edge ${active ? 'active' : ''}" aria-hidden="true"><line x1="${a.x + 70}" y1="${a.y + 28}" x2="${b.x + 70}" y2="${b.y + 28}"/></svg>`;
+    return `<button class="edge-hit ${active ? 'active' : ''}" data-edge="${i}" aria-label="${text(edge.from)} to ${text(edge.to)}, ${edge.count} references" style="--mx:${(a.x + b.x) / 2 + 70}px;--my:${(a.y + b.y) / 2 + 28}px"></button><svg class="edge ${active ? 'active' : ''}" aria-hidden="true"><line x1="${a.x + 70}" y1="${a.y + 28}" x2="${b.x + 70}" y2="${b.y + 28}"/></svg>`;
   }).join('');
   const nodes = item.sheets.map(sheet => {
     const p = positions.get(sheet.name)!;
     const related = !selectedSheet || sheet.name === selectedSheet || item.edges.some(e => (e.from === selectedSheet && e.to === sheet.name) || (e.to === selectedSheet && e.from === sheet.name));
-    return `<button class="node ${sheet.name === selectedSheet ? 'selected' : ''} ${related ? '' : 'dim'}" data-sheet="${encodeURIComponent(sheet.name)}" style="--x:${p.x}px;--y:${p.y}px"><strong>${sheet.name}</strong><span>${sheet.formulaCount} formulas · ${sheet.inbound} in · ${sheet.outbound} out</span></button>`;
+    return `<button class="node ${sheet.name === selectedSheet ? 'selected' : ''} ${related ? '' : 'dim'}" data-sheet="${text(encodeURIComponent(sheet.name))}" style="--x:${p.x}px;--y:${p.y}px"><strong>${text(sheet.name)}</strong><span>${sheet.formulaCount} formulas · ${sheet.inbound} in · ${sheet.outbound} out</span></button>`;
   }).join('');
   return `<div class="graph-scroll"><div class="graph" style="--graph-width:${width}px;--graph-height:${height}px">${paths}${nodes}</div></div>`;
 }
@@ -67,11 +68,11 @@ function graphMarkup(item: Audit) {
 function auditPage() {
   if (!audit) return landing();
   document.title = `${isDemo ? 'Demo' : 'Audit'} — Workbook Constellation`;
-  const details = selectedEdge ? `<p class="path-title"><strong>${selectedEdge.from}</strong> → <strong>${selectedEdge.to}</strong></p>${selectedEdge.formulas.map(f => `<article><code>${f.source}</code><span>feeds</span><code>${f.destination}</code><pre>${f.formula}</pre></article>`).join('')}` : `<p>Select a path to see its source cells and formulas.</p>`;
-  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace dependencies in ${audit.fileName}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} cross-sheet paths</p></div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export handoff report</button>${hasPaidLicense() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
+  const details = selectedEdge ? `<p class="path-title"><strong>${text(selectedEdge.from)}</strong> → <strong>${text(selectedEdge.to)}</strong></p>${selectedEdge.formulas.map(f => `<article><code>${text(f.source)}</code><span>feeds</span><code>${text(f.destination)}</code><pre>${text(f.formula)}</pre></article>`).join('')}` : `<p>Select a path to see its source cells and formulas.</p>`;
+  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace dependencies in ${text(audit.fileName)}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} cross-sheet paths</p></div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export handoff report</button>${hasPaidLicense() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
   <section class="audit-layout"><div class="map-panel"><div class="map-tools"><h2>Sheet map</h2><button data-action="clear-selection">Show all paths</button></div>${graphMarkup(audit)}<p class="graph-help">Tab to a sheet or path. Press Enter to inspect it.</p></div><aside class="proof-panel" aria-labelledby="proof-title"><p class="section-kicker">Cell-level proof</p><h2 id="proof-title">Path evidence</h2><div id="proof-details">${details}</div></aside></section>
-  <section class="warning-panel" aria-labelledby="warning-title"><div><p class="section-kicker">Review before editing</p><h2 id="warning-title">${audit.warnings.length} warning${audit.warnings.length === 1 ? '' : 's'} found</h2></div>${audit.warnings.length ? `<ul>${audit.warnings.map(w => `<li><span class="warning-kind">${w.kind}</span><code>${w.sheet}!${w.cell}</code><span>${w.detail}</span></li>`).join('')}</ul>` : '<p>No external links, cross-sheet cycles, or opaque formulas were found.</p>'}</section>
-  <section class="formula-table" aria-labelledby="formula-title"><h2 id="formula-title">Formula index</h2><div><table><thead><tr><th>Cell</th><th>Formula</th><th>Sources</th></tr></thead><tbody>${audit.formulas.map(f => `<tr><td><code>${f.sheet}!${f.cell}</code></td><td><code>${f.formula}</code></td><td>${f.precedents.map(p => `${p.sheet}!${p.ref}`).join(', ') || 'None found'}</td></tr>`).join('')}</tbody></table></div></section></main>`);
+  <section class="warning-panel" aria-labelledby="warning-title"><div><p class="section-kicker">Review before editing</p><h2 id="warning-title">${audit.warnings.length} warning${audit.warnings.length === 1 ? '' : 's'} found</h2></div>${audit.warnings.length ? `<ul>${audit.warnings.map(w => `<li><span class="warning-kind">${text(w.kind)}</span><code>${text(w.sheet)}!${text(w.cell)}</code><span>${text(w.detail)}</span></li>`).join('')}</ul>` : '<p>No external links, cross-sheet cycles, or opaque formulas were found.</p>'}</section>
+  <section class="formula-table" aria-labelledby="formula-title"><h2 id="formula-title">Formula index</h2><div><table><thead><tr><th>Cell</th><th>Formula</th><th>Sources</th></tr></thead><tbody>${audit.formulas.map(f => `<tr><td><code>${text(f.sheet)}!${text(f.cell)}</code></td><td><code>${text(f.formula)}</code></td><td>${f.precedents.map(p => `${text(p.sheet)}!${text(p.ref)}`).join(', ') || 'None found'}</td></tr>`).join('')}</tbody></table></div></section></main>`);
 }
 
 function legalPage(kind: 'privacy' | 'terms') {

@@ -1,6 +1,5 @@
 import type { Audit } from './types';
-
-const escape = (value: string) => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+import { escapeHtml as escape } from './html';
 
 export function reportHtml(audit: Audit) {
   const rows = audit.edges.flatMap(edge => edge.formulas.map(f => `<tr><td>${escape(f.source)}</td><td>${escape(f.destination)}</td><td><code>${escape(f.formula)}</code></td></tr>`)).join('');

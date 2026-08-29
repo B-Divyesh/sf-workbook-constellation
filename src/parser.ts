@@ -26,7 +26,15 @@ export function parseFormula(formula: string, currentSheet: string) {
 }
 
 export function auditWorkbook(buffer: ArrayBuffer, fileName: string): Audit {
+  const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 4));
+  const zipSignature = signature.length === 4 && signature[0] === 0x50 && signature[1] === 0x4b && (
+    (signature[2] === 0x03 && signature[3] === 0x04) ||
+    (signature[2] === 0x05 && signature[3] === 0x06) ||
+    (signature[2] === 0x07 && signature[3] === 0x08)
+  );
+  if (!zipSignature) throw new Error('Workbook is not a valid XLSX container');
   const workbook = XLSX.read(buffer, { type: 'array', cellFormula: true, cellHTML: false, cellNF: false });
+  if (!workbook.SheetNames.length) throw new Error('Workbook contains no sheets');
   const formulas: FormulaRecord[] = [];
   for (const sheet of workbook.SheetNames) {
     const data = workbook.Sheets[sheet];

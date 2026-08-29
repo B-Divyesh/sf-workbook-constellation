@@ -1,5 +1,5 @@
-const CACHE = 'workbook-constellation-v3';
-const SHELL = ['/', '/demo', '/privacy', '/terms', '/favicon.svg', '/art/hero-768.webp'];
+const CACHE = 'workbook-constellation-v4';
+const SHELL = ['/', '/demo', '/privacy', '/terms', '/favicon.svg', '/art/hero-768-9e3e4d45.webp'];
 self.addEventListener('install', event => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
   await cache.addAll(SHELL);

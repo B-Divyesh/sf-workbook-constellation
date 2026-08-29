@@ -1,31 +1,66 @@
 [
   {
     "id": "sample-map",
-    "claim": "The sample shows an eight-sheet map with cell-level path evidence.",
+    "claim": "The bundled sample shows eight sheets, seven formulas, nine cross-sheet paths, and external and opaque warnings.",
     "where": "demo and README",
     "test": "npm run test:e2e -- --grep @claim:sample-map",
-    "sandbox": "fresh browser context at /demo"
+    "sandbox": "fresh browser context at /demo; inspect the map, evidence, counts, and warning types"
+  },
+  {
+    "id": "no-account",
+    "claim": "The sample works without an account or file setup.",
+    "where": "landing facts and README",
+    "test": "npm run test:e2e -- --grep @claim:no-account",
+    "sandbox": "fresh browser context at /demo; assert the populated audit and absence of authentication state"
   },
   {
     "id": "html-export",
     "claim": "Exports a static HTML handoff report.",
     "where": "How it works, audit toolbar, and README",
     "test": "npm run test:e2e -- --grep @claim:html-export",
-    "sandbox": "sample data; assert downloaded report contents"
+    "sandbox": "sample data; assert the downloaded report name and evidence contents"
   },
   {
     "id": "local-only",
     "claim": "Workbook and demo contents stay on the device.",
     "where": "hero, privacy page, and README",
     "test": "npm run test:e2e -- --grep @claim:local-only",
-    "sandbox": "fresh browser context; observe every request through the demo flow"
+    "sandbox": "fresh browser context at /demo; observe every request through selection and inspect demo storage"
+  },
+  {
+    "id": "runtime-privacy",
+    "claim": "The app includes no analytics, third-party scripts, or remote fonts; only GitHub release metadata and explicit Sociobot license actions may use external services.",
+    "where": "privacy page and README",
+    "test": "npm run test:e2e -- --grep @claim:runtime-privacy",
+    "sandbox": "fresh landing context with GitHub mocked; record all requests and inspect external script and stylesheet elements"
   },
   {
     "id": "json-export",
-    "claim": "A Plus license adds JSON evidence export.",
-    "where": "paid tier and audit toolbar",
+    "claim": "A valid Plus license adds JSON evidence export.",
+    "where": "paid tier, audit toolbar, and README",
     "test": "npm run test:e2e -- --grep @claim:json-export",
-    "sandbox": "demo data with a cached valid test verdict; assert JSON download"
+    "sandbox": "sample data with a cached valid test verdict; assert the JSON download"
+  },
+  {
+    "id": "license-terms",
+    "claim": "Constellation Plus costs $19 once, keeps HTML reports free, accepts workbooks above eight sheets, and uses Sociobot and Dodo as merchant of record.",
+    "where": "landing paid tier, terms, and README",
+    "test": "npm run test:e2e -- --grep @claim:license-terms",
+    "sandbox": "fresh landing context; assert price, free HTML term, and the exact Sociobot checkout URL"
+  },
+  {
+    "id": "free-sheet-limit",
+    "claim": "The free tier accepts workbooks with up to eight sheets; a valid license removes the eight-sheet cap.",
+    "where": "landing facts, upload recovery, and README",
+    "test": "npm run test:e2e -- --grep @claim:free-sheet-limit",
+    "sandbox": "fresh browser context; upload the same nine-sheet workbook without and with a cached valid verdict"
+  },
+  {
+    "id": "input-boundaries",
+    "claim": "Accepts XLSX and XLSM files up to 50 MB and rejects unsupported, oversized, or unreadable input.",
+    "where": "workspace, limits, recovery messages, and README",
+    "test": "npm run test:e2e -- --grep @claim:input-boundaries",
+    "sandbox": "fresh browser context; upload generated XLSX/XLSM plus wrong-extension, 50 MB + 1 byte, and malformed fixtures"
   },
   {
     "id": "offline-reload",
@@ -36,9 +71,51 @@
   },
   {
     "id": "read-only-boundaries",
-    "claim": "The parser reports formulas without calculating cells or running macros.",
+    "claim": "The parser reports formulas without calculating cells, editing workbooks, running macros, or opening external files.",
     "where": "workspace, limits, privacy, terms, and README",
     "test": "npm run test:unit -- --testNamePattern @claim:read-only-boundaries",
-    "sandbox": "generated workbook fixture with a formula and macro-like payload"
+    "sandbox": "generated workbook fixture containing a formula and macro-like payload; inspect the structural output"
+  },
+  {
+    "id": "formula-syntax",
+    "claim": "Parses ordinary A1 formulas with quoted sheet names, ranges, and cross-sheet references.",
+    "where": "README supported workbook features",
+    "test": "npm run test:unit -- --testNamePattern @claim:formula-syntax",
+    "sandbox": "formula fixture with a quoted sheet, absolute range, and second cross-sheet reference"
+  },
+  {
+    "id": "warning-types",
+    "claim": "Flags external workbook markers, opaque formulas, and cross-sheet cycles.",
+    "where": "How it works, limits, and README",
+    "test": "npm run test:unit -- --testNamePattern @claim:warning-types",
+    "sandbox": "generated formula records containing an external marker, OFFSET, and a two-sheet cycle"
+  },
+  {
+    "id": "escaped-evidence",
+    "claim": "Reports display workbook-controlled text literally instead of interpreting it as page markup.",
+    "where": "README privacy and security",
+    "test": "npm run test:e2e -- --grep @claim:escaped-evidence",
+    "sandbox": "upload a generated workbook whose filename, sheet name, formula, and warning contain markup-shaped text; inspect UI and HTML export"
+  },
+  {
+    "id": "desktop-download",
+    "claim": "The landing page links the detected platform installer and published checksums from GitHub release metadata.",
+    "where": "desktop download section and README",
+    "test": "npm run test:e2e -- --grep @claim:desktop-download",
+    "sandbox": "fresh landing context with recorded GitHub API metadata fixture; assert platform asset and checksum-page links"
+  },
+  {
+    "id": "release-workflow",
+    "claim": "A version tag builds unsigned Linux, Windows, Intel macOS, and Apple silicon macOS installers, then publishes SHA-256 checksums and a latest-release manifest.",
+    "where": "desktop download section and README",
+    "test": "npm run test:unit -- --testNamePattern @claim:release-workflow",
+    "sandbox": "inspect the shipped GitHub Actions workflow for all four jobs and both generated release metadata files"
+  },
+  {
+    "id": "installer-safety",
+    "claim": "The shell and PowerShell helpers verify SHA-256 before keeping an installer.",
+    "where": "desktop download section and README",
+    "test": "npm run test:unit -- --testNamePattern @claim:installer-safety",
+    "sandbox": "inspect shipped helper scripts for checksum retrieval, comparison, and failure cleanup"
   }
 ]

@@ -25,8 +25,31 @@ export async function loadDownload() {
     const choice = platform();
     const asset = data.release.assets.find(item => choice.match.test(item.name));
     if (!asset) throw new Error('platform build unavailable');
-    target.innerHTML = `<a class="primary" href="${asset.browser_download_url}">${choice.label}</a><a href="${data.release.html_url}">All downloads and checksums <span class="sr-only">(external)</span></a>`;
+    const assetUrl = new URL(asset.browser_download_url);
+    const releaseUrl = new URL(data.release.html_url);
+    if (assetUrl.origin !== 'https://github.com' || releaseUrl.origin !== 'https://github.com') throw new Error('unexpected release origin');
+    const download = document.createElement('a');
+    download.className = 'primary';
+    download.href = assetUrl.href;
+    download.textContent = choice.label;
+    const allDownloads = document.createElement('a');
+    allDownloads.href = releaseUrl.href;
+    allDownloads.append('All downloads and checksums ');
+    const external = document.createElement('span');
+    external.className = 'sr-only';
+    external.textContent = '(external)';
+    allDownloads.append(external);
+    target.replaceChildren(download, allDownloads);
   } catch {
-    target.innerHTML = `<p>Downloads are being published.</p><a href="${releasePage}">Check the release page <span class="sr-only">(external)</span></a>`;
+    const message = document.createElement('p');
+    message.textContent = 'Downloads are being published.';
+    const releaseLink = document.createElement('a');
+    releaseLink.href = releasePage;
+    releaseLink.append('Check the release page ');
+    const external = document.createElement('span');
+    external.className = 'sr-only';
+    external.textContent = '(external)';
+    releaseLink.append(external);
+    target.replaceChildren(message, releaseLink);
   }
 }
