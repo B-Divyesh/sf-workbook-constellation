@@ -54,7 +54,7 @@ Encrypted workbooks show a specific error. Damaged files cannot be read. The map
 
 ## Privacy and security
 
-Workbook parsing runs in the browser or desktop webview. The app contacts Sociobot only when you buy or verify a license. The landing page contacts GitHub only to check for installers. No analytics, third-party scripts, or remote fonts are included.
+Workbook parsing runs in the browser or desktop webview. The app contacts Sociobot only when you buy or verify a license. GitHub is contacted only when you check for a newer installer. No analytics, third-party scripts, or remote fonts are included.
 
 Files are limited to 50 MB before parsing. The audit screen and exported reports show workbook-controlled text without treating it as markup. Check important paths against the original workbook before you act on the report.
 

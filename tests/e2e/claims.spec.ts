@@ -165,7 +165,7 @@ test('@claim:local-only sends no workbook or demo data off origin', async ({ pag
     buffer: workbook(2, 'Sheet1!A1+1337')
   });
   await expect(page.getByRole('heading', { name: 'Trace formula paths in private.xlsx' })).toBeVisible();
-  expect(external).toEqual(['https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/latest']);
+  expect(external).toEqual([]);
   expect(requestBodies.join('\n')).not.toContain('1337');
 });
 
@@ -290,6 +290,7 @@ test('@claim:runtime-privacy uses only documented services in web and desktop fl
   await webPage.route('https://api.github.com/**', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }));
   await webPage.route('https://api.sociobot.in/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"valid":false}' }));
   await webPage.goto('/');
+  await webPage.getByRole('button', { name: 'Check for a newer release' }).click();
   await webPage.getByLabel('Have a license?').fill('privacy-test-token');
   await webPage.getByRole('button', { name: 'Verify license' }).click();
   await expect(webPage.getByRole('status').last()).toContainText('not active');
@@ -324,7 +325,7 @@ test('@claim:desktop-local-parsing parses an XLSM in a desktop-webview context w
     buffer: workbook(2, 'Sheet1!A1+8246')
   });
   await expect(page.getByRole('heading', { name: 'Trace formula paths in desktop-private.xlsm' })).toBeVisible();
-  expect(requests.filter(request => request.url.includes('api.github.com'))).toHaveLength(1);
+  expect(requests.filter(request => request.url.includes('api.github.com'))).toHaveLength(0);
   expect(requests.map(request => request.body).join('\n')).not.toContain('8246');
   await context.close();
 });

@@ -24,6 +24,7 @@ test('@claim:desktop-download uses CORS-safe GitHub metadata to link the detecte
   }));
 
   await page.goto('/');
+  await page.getByRole('button', { name: 'Check for a newer release' }).click();
 
   const download = page.getByRole('link', { name: 'Download for Linux (external)' });
   await expect(download).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.1\/.+\.AppImage$/);
@@ -31,7 +32,7 @@ test('@claim:desktop-download uses CORS-safe GitHub metadata to link the detecte
   await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /github\.com\/.+\/releases\/tag\/v0\.1\.1$/);
 });
 
-test('shows a calm release-page fallback when no release exists', async ({ page }) => {
+test('keeps the shipped release available when a newer-release check fails', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.route(apiUrl, route => route.fulfill({
@@ -42,27 +43,17 @@ test('shows a calm release-page fallback when no release exists', async ({ page 
   }));
 
   await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.8/);
+  await page.getByRole('button', { name: 'Check for a newer release' }).click();
 
-  await expect(page.getByText('Downloads are being published.')).toBeVisible();
-  await expect(page.getByRole('link', { name: /Check the release page/ })).toHaveAttribute(
-    'href',
-    'https://github.com/B-Divyesh/sf-workbook-constellation/releases'
-  );
+  await expect(page.getByText('GitHub is unavailable. Showing v0.1.8.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /releases\/tag\/v0\.1\.8$/);
   expect(pageErrors).toEqual([]);
 });
 
 test('selects Intel and Apple silicon macOS disk images independently', async ({ browser }) => {
-  const release = {
-    html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.4',
-    assets: [
-      { name: 'Workbook.Constellation_0.1.4_aarch64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_aarch64.dmg' },
-      { name: 'Workbook.Constellation_0.1.4_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_x64.dmg' },
-      { name: 'SHA256SUMS', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/SHA256SUMS' }
-    ]
-  };
   const intel = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });
   const intelPage = await intel.newPage();
-  await intelPage.route(apiUrl, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(release) }));
   await intelPage.goto('/');
   await expect(intelPage.getByRole('link', { name: 'Download for macOS (Intel) (external)' })).toHaveAttribute('href', /_x64\.dmg$/);
   await intel.close();
@@ -70,7 +61,6 @@ test('selects Intel and Apple silicon macOS disk images independently', async ({
   const arm = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });
   await arm.addInitScript(() => Object.defineProperty(navigator, 'userAgentData', { value: { getHighEntropyValues: async () => ({ architecture: 'arm' }) } }));
   const armPage = await arm.newPage();
-  await armPage.route(apiUrl, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(release) }));
   await armPage.goto('/');
   await expect(armPage.getByRole('link', { name: 'Download for macOS (Apple silicon) (external)' })).toHaveAttribute('href', /_aarch64\.dmg$/);
   await arm.close();

@@ -3,42 +3,19 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const apiUrl = 'https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/latest';
 const expectedCsp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.sociobot.in https://api.github.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
-test('deployed CSP permits the CORS-safe release lookup with no console errors', async ({ page }) => {
+test('deployed CSP permits release checks and cold load has no console errors', async ({ page }) => {
   const errors: string[] = [];
-  const apiResponses: Array<{ ok: boolean; allowOrigin: string | undefined }> = [];
   page.on('console', message => {
     if (message.type() === 'error') errors.push(message.text());
   });
   page.on('pageerror', error => errors.push(error.message));
-  page.on('response', response => {
-    if (response.url() === apiUrl) {
-      apiResponses.push({
-        ok: response.ok(),
-        allowOrigin: response.headers()['access-control-allow-origin']
-      });
-    }
-  });
-
   const documentResponse = await page.goto('/', { waitUntil: 'networkidle' });
 
   expect(documentResponse?.headers()['content-security-policy']).toBe(expectedCsp);
-  expect(apiResponses).toHaveLength(1);
-  expect(apiResponses[0].allowOrigin).toBe('*');
-  if (apiResponses[0].ok) {
-    await expect(page.locator('#download-action a.primary')).toHaveAttribute(
-      'href',
-      /github\.com\/.+\/releases\/download\//
-    );
-  } else {
-    await expect(page.getByText('Downloads are being published.')).toBeVisible();
-    await expect(page.getByRole('link', { name: /Check the release page/ })).toHaveAttribute(
-      'href',
-      'https://github.com/B-Divyesh/sf-workbook-constellation/releases'
-    );
-  }
+  await expect(page.locator('#download-action a.primary')).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.8\//);
+  await expect(page.getByRole('button', { name: 'Check for a newer release' })).toBeVisible();
 
   for (const path of ['/demo', '/privacy', '/terms']) {
     await page.goto(path, { waitUntil: 'networkidle' });
@@ -46,10 +23,7 @@ test('deployed CSP permits the CORS-safe release lookup with no console errors',
     await expect(page.locator('main')).toHaveCount(1);
     await expect(page.locator('h1')).toHaveCount(1);
   }
-  const unexpectedErrors = apiResponses[0].ok
-    ? errors
-    : errors.filter(message => !message.includes('server responded with a status of 403'));
-  expect(unexpectedErrors).toEqual([]);
+  expect(errors).toEqual([]);
 });
 
 test('deployed unknown routes keep HTTP 404 and versioned assets are immutable', async ({ page }) => {

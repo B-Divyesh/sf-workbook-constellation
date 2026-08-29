@@ -36,10 +36,10 @@
   },
   {
     "id": "runtime-privacy",
-    "claim": "The web and desktop app include no analytics, third-party scripts, or remote fonts; only GitHub release checks and explicit Sociobot license actions contact external services.",
+    "claim": "The web and desktop app include no analytics, third-party scripts, or remote fonts; only requested GitHub release checks and Sociobot license actions contact external services.",
     "where": "privacy page and README",
     "test": "npm run test:e2e -- --grep @claim:runtime-privacy",
-    "sandbox": "fresh web and simulated Tauri contexts; exercise GitHub lookup, license verification, and workbook interaction while recording every request"
+    "sandbox": "fresh web and simulated Tauri contexts; request a GitHub lookup, verify a license, and use a workbook while recording every request"
   },
   {
     "id": "desktop-local-parsing",
@@ -141,7 +141,7 @@
   },
   {
     "id": "desktop-download",
-    "claim": "The landing page links the detected platform installer and published checksums from GitHub release metadata.",
+    "claim": "The landing page links the detected platform installer and published checksums, and can check GitHub for newer release metadata.",
     "where": "desktop download section and README",
     "test": "npm run test:e2e -- --grep @claim:desktop-download",
     "sandbox": "fresh landing context with recorded GitHub API metadata containing a platform asset and SHA256SUMS; assert direct links to both"
