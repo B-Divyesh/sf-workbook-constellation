@@ -69,8 +69,11 @@ The served worker exactly matches the build (SHA-256
   Static Web Apps configuration. The deploy credential was rotated immediately
   after upload.
 - Tag `v0.1.2` was pushed from `f284c54`; GitHub Actions release run
-  `33236985757` is building the macOS, Windows, and Linux release assets and
-  checksums. The local Linux artifact above is the verified package evidence.
+  `33236985757` completed successfully. The published release has macOS
+  (Intel and Apple silicon), Windows MSI/EXE, Linux AppImage/DEB/RPM,
+  `SHA256SUMS`, and a valid nine-asset `latest.json` manifest. A fresh
+  published Linux DEB stream matched `SHA256SUMS`:
+  `3e658005932b9bd33836f05189b0ee9af44d51087113dda31475970fbb112fa5`.
 
 ## Known gaps / operator action
 
