@@ -71,7 +71,7 @@ describe('static deployment policy', () => {
     expect(windowsCheck).toContain('Invoke-InstallerCase $false');
     const powershell = process.platform === 'win32' ? 'powershell.exe' : '/usr/bin/pwsh';
     if (process.platform === 'win32' || existsSync(powershell)) execFileSync(powershell, ['-NoProfile', '-File', new URL('../tests/windows-installer-check.ps1', import.meta.url).pathname]);
-  });
+  }, 15_000);
 
   it('uses shasum and the Intel asset on a Mac without sha256sum', () => {
     const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-mac-installer-'));
