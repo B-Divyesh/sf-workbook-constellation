@@ -1,71 +1,76 @@
-# Workbook Constellation — verification 4 handoff
+# Workbook Constellation — repair handoff
 
 ## Release status
 
-**FAIL — do not release candidate `f23f26c8abd826003edbd5e50d25fb9ee9be22cf`.**
+**PASS — repair deployed to production.**
 
-Tested 2026-08-29 UTC against
-<https://workbook-constellation.sociobot.in>. Live HTML, JS, CSS, and service
-worker match the fresh candidate build byte-for-byte. This is not a stale
-deployment result.
+- Repair commit: `02e196328da30c56c01a1af4d7742fb2374ecbbe`
+- Base verifier report: `.factory/verification-4.md` for candidate
+  `f23f26c8abd826003edbd5e50d25fb9ee9be22cf`
+- Static deployment: `2026-08-29 UTC` to
+  <https://workbook-constellation.sociobot.in> using the
+  `sf-workbook-constellation` Static Web App production deployment token.
+- Live identity: `npm run test:live` passed `5/5` after deployment and matched
+  deployed `/assets/index-B5snDTa0.js` and `sw.js` byte-for-byte.
 
-## Defects by severity
+## Repairs
 
-1. **High — paid checkout is dead.** The live **Buy a $19 license** link returns
-   HTTP 404 with `{"error":"enabled factory product","status":404}` instead of
-   hosted checkout. The existing claim test checks only the URL string.
-2. **High — Linux install is not runnable.** Served `install.sh` verifies the
-   correct AppImage but saves it as mode `0644`; execution exits 126 with
-   `Permission denied`. A manual `chmod +x` is required.
-3. **Medium — focus contrast fails.** The `#e39221` ring is 2.20:1 on the paper
-   surface and 1.75:1 on the pricing surface, below the required 3:1.
-4. **Medium — development audit is not clean.** `npm audit` reports one critical,
-   one high, and three moderate development-only Vitest/Vite advisories.
-   Production dependency audit reports zero findings.
-5. **Low — mobile target width.** At 390 px, the footer Terms link is
-   43.5625 px wide rather than the required 44 px.
-6. **Low — external link labeling.** Platform download and purchase links do
-   not announce that they leave the site.
+1. Reproduced the verifier's Linux installer failure first: the old helper
+   downloaded `Workbook.Constellation_0.1.2_amd64.AppImage` as mode `0644`, and
+   direct execution returned exit `126` / `Permission denied`.
+2. `install.sh` now verifies SHA-256, copies the Linux AppImage, runs
+   `chmod +x`, and launches it. The new isolated regression replaces curl and
+   checksum inputs with fixtures, asserts an executable mode, and asserts the
+   downloaded application was launched. A real production run now leaves the
+   81,115,640-byte AppImage at mode `755`.
+3. The approved production checkout now responds `303` to a Dodo session. A
+   live Playwright request regression asserts both status and the Dodo checkout
+   location; the purchase link remains the Sociobot endpoint and is labelled
+   external to assistive technology.
+4. Replaced the low-contrast global ring with `#005a66` on paper/tan surfaces
+   and `#ffd166` on dark surfaces. Browser coverage measures each focused
+   color at at least `3:1` against its adjacent surface.
+5. Mobile controls are now covered in both dimensions. Header and footer links
+   have a minimum `44 × 44` target; the `390 × 844` regression checks every
+   visible link, button, and input on `/`, `/demo`, `/privacy`, and `/terms`.
+6. Dynamic GitHub installer links and the Sociobot purchase link include an
+   accessible `(external)` destination label.
+7. Updated Vite/Vitest and Node types. `npm audit --audit-level=low` reports
+   `0` vulnerabilities. The service worker now ignores a host's `Vary: Origin`
+   variation when retrieving its precached hashed assets, preserving the
+   offline demo reload under the updated Vite preview server.
 
-## What passed
+## Verification evidence
 
-- Mandatory first read and one-click sample demo, including `390 × 844`.
-- All 17 commands in `.factory/claims.json`.
-- `npm test`: 12 unit checks and 19 Playwright checks.
-- Type checks, `npm run build`, `npm run build:app`, Rust `cargo check`, and a
-  real local Tauri Debian package build.
-- `npm run test:live`: 4/4.
-- Independent Axe: zero serious/critical findings on all routes at desktop and
-  mobile; semantics, keyboard graph use, reduced motion, no overflow, HTTP 404,
-  and route announcements passed.
-- Privacy: demo/select/export made same-origin requests only and left demo
-  storage empty. The cold landing made only the documented GitHub API call.
-  No browser console/page errors occurred.
-- Security/caching headers, installed service-worker update regression, and a
-  live offline `/demo` reload passed.
-- Mobile Lighthouse: performance 92, accessibility 100, best practices 100,
-  SEO 100; LCP 1.8 s and CLS 0. JS is 128.63 KB gzip and CSS 3.39 KB gzip.
-- Release `v0.1.2` has all required platforms. The downloaded AMD64 DEB matched
-  `SHA256SUMS` at
-  `3e658005932b9bd33836f05189b0ee9af44d51087113dda31475970fbb112fa5`.
-- License API allowance: requests 1–30 returned 200; request 31 returned 429
-  with `Retry-After: 4`.
-
-## Verification commands
+All commands ran from a clean `npm ci` install unless noted:
 
 ```sh
 npm ci
-npm test
-npm run build
-npm run build:app
+npm audit --audit-level=low             # 0 vulnerabilities
+npm test                                # 13 Vitest + 20 Playwright passed
+npm run build                           # dist/site/
+npm run build:app                       # dist/app/
 cargo check --manifest-path src-tauri/Cargo.toml --locked
 CI=true npm run tauri -- build --bundles deb
-npm audit --omit=dev --audit-level=high
-npm run test:live
+dpkg-deb -f src-tauri/target/release/bundle/deb/Workbook\ Constellation_0.1.2_amd64.deb Package Version Architecture
+npm run test:live                       # 5/5 passed after deployment
+/opt/fleet/lib/verify-url.sh https://workbook-constellation.sociobot.in .factory/qa-artifacts/verify-url-repair
 ```
 
-Full evidence and remediation detail are in `.factory/verification-4.md` and
-`.factory/qa-artifacts/verification-4/`.
+- Every one of the 17 exact commands declared in `.factory/claims.json` passed
+  separately from the clean install.
+- Axe is run through the shipped Playwright integration on `/`, `/demo`,
+  `/privacy`, and `/terms`; it found no serious or critical violations.
+- `verify-url.sh` recorded HTTP `200`, `lang=en`, one `h1`, one `main`, complete
+  image alt text, named buttons, and no browser errors. Fresh screenshots and
+  response data are in `.factory/qa-artifacts/verify-url-repair/`.
+- The generated Debian package identifies as
+  `workbook-constellation 0.1.2 amd64` (3,476,288 bytes).
+- The local production bundle is 126.83 KB gzip JavaScript and 3.43 KB gzip
+  CSS. It remains within the static product budget.
+- Privacy regressions continue to assert only same-origin traffic for workbook
+  flows, with the documented GitHub release lookup and explicit Sociobot
+  actions as the sole external services.
 
 ## Known boundaries / operator action
 
@@ -74,5 +79,7 @@ Full evidence and remediation detail are in `.factory/verification-4.md` and
   cannot be read.
 - Desktop packages are intentionally unsigned. macOS notarization and Windows
   signing require owner-provided `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`.
-- Enable/register the production Sociobot billing product before re-verification.
-- No product source code was changed during this verification.
+- The container has no FUSE device, so the real AppImage launch reports its
+  normal FUSE mount error after the helper successfully launches it. This is a
+  container limitation, not an installer permission failure; the production
+  AppImage is executable and the launch behavior has an isolated regression.
