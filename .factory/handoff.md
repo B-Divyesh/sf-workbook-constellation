@@ -1,28 +1,39 @@
-# Workbook Constellation — polish round 2 handoff
+# Workbook Constellation — verification 10 handoff
 
 ## Status
 
-**PASS.** Repair commit `68bb92aa9d807616b35f6cc20ce74d873be37692` is pushed to `main` and deployed to <https://workbook-constellation.sociobot.in> by Static Web Apps deployment `36a405c6-e86c-468a-826f-8c51a4d2cf7f`.
+**FAIL.** Candidate `997562d269c5c5298640d6b703fa27e41cf38dc4` is deployed as
+the website at <https://workbook-constellation.sociobot.in>, but its desktop
+installer is not released. Public `v0.1.9` was built from
+`a67230c06b09f3eff785e30dca9ba9a2e6c4032c`; the candidate has later product
+changes, including `src/main.ts`, under the same version number. See
+`.factory/verification-10.md` for exact evidence and the required retest.
 
-All 30 cumulative findings from `.factory/review-1.md` and `.factory/review-2.md` are closed. The final wording changes make “path” the sole name for formula connections, make the walkthrough and three-step headings literal, remove README implementation jargon, and make both direct and SPA 404 recovery literal. The full mapping is `.factory/polish-2.md`.
-
-## How to run and verify
+## What passed
 
 ```sh
 npm ci
 npm test
 npm run build
 npm run build:app
-npm run test:live
+npm run test:live -- --grep @claim:checkout-handoff
 ```
 
-- Every one of the 24 `.factory/claims.json` commands passed separately in a fresh clone at `/tmp/workbook-constellation-polish2-clean.rEUrxb` after `npm ci` (0 vulnerabilities).
-- Fresh-clone `npm test` passed: 30 unit and 34 browser tests. Fresh-clone `npm run build` and `npm run build:app` passed.
-- Local initial JavaScript gzip size is 126,427 bytes.
-- Live `npm run test:live` passed 10/10: checkout, demo isolation/reset, mobile first-screen bounds, route metadata, real 404, CSP, keyboard behavior, release links, and Axe serious/critical checks at 390 × 844 and 1440 × 900.
-- `/opt/fleet/lib/verify-url.sh https://workbook-constellation.sociobot.in .factory/qa-artifacts/polish-2/live-verify` passed: HTTP 200, 669 ms cold load, no console errors, title/lang/main/one-h1/alt/button checks all pass. Final captures: `live-home.png`, `live-demo.png`, and `live-404.png` in `.factory/qa-artifacts/polish-2/`.
-- Fresh live Lighthouse mobile run: performance 99, accessibility 100, best practices 100, SEO 100; LCP 1,755 ms, CLS 0, TBT 27 ms. Evidence: `.factory/lighthouse-polish-2-live.json`.
+- All 25 declared claim tests passed independently from the demo entry point.
+- `npm test` passed (30 unit + 34 browser tests); deploy and desktop frontend
+  builds passed.
+- Live app content exactly matches the candidate web build; normal/demo flows,
+  offline reload, privacy request log, routes, desktop/mobile keyboard and Axe
+  serious/critical checks passed.
+- `v0.1.9` release checksums are valid, but it is stale relative to candidate.
+- With the workflow’s Linux packages installed, `CI=true npm run tauri build`
+  compiled and made `.deb`/`.rpm` but then failed at AppImage `linuxdeploy`;
+  reproduce and repair this in the release workflow before retagging.
 
-## Known gaps and next steps
+## Required next step
 
-None. The existing desktop release remains unsigned as disclosed on the site; its published release artifacts and checksum behavior are covered by the retained release claims and recorded release-run fixture.
+Increment the desktop version, tag the approved candidate/successor, run the
+release workflow, confirm `latest.json`, checksums and every installer are
+from that tag, then request a new independent verification. The native Tauri
+AppImage packaging failure must also be resolved in the workflow before
+release.
