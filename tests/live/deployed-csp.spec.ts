@@ -50,3 +50,15 @@ test('deployed unknown routes keep HTTP 404 and versioned assets are immutable',
   expect(missing?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'This sheet is not in the workbook' })).toBeVisible();
 });
+
+test('deployed demo remains keyboard-accessible at the 390px mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/demo', { waitUntil: 'networkidle' });
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  for (const name of ['Reset demo', 'Start for real']) {
+    const box = await page.getByRole('button', { name }).boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+});
