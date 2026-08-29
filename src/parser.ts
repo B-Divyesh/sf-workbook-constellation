@@ -5,6 +5,29 @@ const cellRef = /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_. \[\]-]+))!)?(\$?[A-Z]{1,3}
 const opaqueFunctions = /\b(?:INDIRECT|OFFSET|WEBSERVICE|CUBE(?:VALUE|MEMBER)|RTD)\s*\(/i;
 const externalBook = /\[([^\]]+)\]/;
 
+// Excel escapes a quote inside a string by doubling it. Keep every character
+// outside those strings at its original offset so the reference matcher can
+// safely read sheet names from the original formula.
+function maskStringLiterals(formula: string) {
+  let quoted = false;
+  let masked = '';
+  for (let index = 0; index < formula.length; index += 1) {
+    const char = formula[index];
+    if (char === '"') {
+      if (quoted && formula[index + 1] === '"') {
+        masked += '  ';
+        index += 1;
+      } else {
+        quoted = !quoted;
+        masked += ' ';
+      }
+    } else {
+      masked += quoted ? ' ' : char;
+    }
+  }
+  return masked;
+}
+
 function cleanSheet(value: string | undefined, current: string) {
   return (value?.replace(/''/g, "'").replace(externalBook, '') || current).trim();
 }
@@ -12,10 +35,11 @@ function cleanSheet(value: string | undefined, current: string) {
 export function parseFormula(formula: string, currentSheet: string) {
   const precedents: FormulaRecord['precedents'] = [];
   const warnings = new Set<WarningKind>();
-  if (opaqueFunctions.test(formula)) warnings.add('opaque');
+  const searchable = maskStringLiterals(formula);
+  if (opaqueFunctions.test(searchable)) warnings.add('opaque');
   let match: RegExpExecArray | null;
   cellRef.lastIndex = 0;
-  while ((match = cellRef.exec(formula))) {
+  while ((match = cellRef.exec(searchable))) {
     const rawSheet = match[1] || match[2];
     const external = rawSheet?.match(externalBook)?.[1];
     if (external) warnings.add('external');
@@ -63,20 +87,71 @@ export function buildAudit(fileName: string, sheetNames: string[], formulas: For
     }
   }
   const edges = [...edgeMap.values()];
-  const graph = new Map<string, string[]>();
-  edges.forEach(edge => graph.set(edge.from, [...(graph.get(edge.from) || []), edge.to]));
-  const circularSheets = new Set<string>();
-  const visit = (start: string, node: string, seen: Set<string>) => {
+  const normalizeCell = (value: string) => value.replace(/\$/g, '').toUpperCase();
+  const cellParts = (value: string) => {
+    const match = normalizeCell(value).match(/^([A-Z]{1,3})(\d+)$/);
+    if (!match) return null;
+    let column = 0;
+    for (const char of match[1]) column = column * 26 + char.charCodeAt(0) - 64;
+    return { column, row: Number(match[2]) };
+  };
+  const refContains = (ref: string, cell: string) => {
+    const [startValue, endValue = startValue] = ref.split(':');
+    const start = cellParts(startValue), end = cellParts(endValue), target = cellParts(cell);
+    if (!start || !end || !target) return false;
+    return target.column >= Math.min(start.column, end.column) && target.column <= Math.max(start.column, end.column)
+      && target.row >= Math.min(start.row, end.row) && target.row <= Math.max(start.row, end.row);
+  };
+  const nodeKey = (sheet: string, cell: string) => `${sheet}\u0000${normalizeCell(cell)}`;
+  const formulaByNode = new Map(formulas.map(formula => [nodeKey(formula.sheet, formula.cell), formula]));
+  const formulasBySheet = new Map<string, FormulaRecord[]>();
+  for (const formula of formulas) formulasBySheet.set(formula.sheet, [...(formulasBySheet.get(formula.sheet) || []), formula]);
+  const graph = new Map<string, Set<string>>();
+  for (const destination of formulas) {
+    const destinationNode = nodeKey(destination.sheet, destination.cell);
+    for (const precedent of destination.precedents) {
+      if (precedent.external) continue;
+      for (const source of formulasBySheet.get(precedent.sheet) || []) {
+        if (!refContains(precedent.ref, source.cell)) continue;
+        const sourceNode = nodeKey(source.sheet, source.cell);
+        graph.set(sourceNode, new Set([...(graph.get(sourceNode) || []), destinationNode]));
+      }
+    }
+  }
+  const circularCells = new Set<string>();
+  const indices = new Map<string, number>(), lowLinks = new Map<string, number>(), stack: string[] = [], onStack = new Set<string>();
+  let nextIndex = 0;
+  const connect = (node: string) => {
+    indices.set(node, nextIndex);
+    lowLinks.set(node, nextIndex);
+    nextIndex += 1;
+    stack.push(node);
+    onStack.add(node);
     for (const next of graph.get(node) || []) {
-      if (next === start) circularSheets.add(start);
-      else if (!seen.has(next)) visit(start, next, new Set([...seen, next]));
+      if (!indices.has(next)) {
+        connect(next);
+        lowLinks.set(node, Math.min(lowLinks.get(node)!, lowLinks.get(next)!));
+      } else if (onStack.has(next)) {
+        lowLinks.set(node, Math.min(lowLinks.get(node)!, indices.get(next)!));
+      }
+    }
+    if (lowLinks.get(node) !== indices.get(node)) return;
+    const component: string[] = [];
+    let member: string;
+    do {
+      member = stack.pop()!;
+      onStack.delete(member);
+      component.push(member);
+    } while (member !== node);
+    if (component.length > 1 || graph.get(node)?.has(node)) {
+      component.forEach(cell => circularCells.add(cell));
     }
   };
-  sheetNames.forEach(sheet => visit(sheet, sheet, new Set([sheet])));
+  formulaByNode.forEach((_formula, node) => { if (!indices.has(node)) connect(node); });
   for (const formula of formulas) {
-    if (circularSheets.has(formula.sheet) && !formula.warnings.includes('circular')) {
+    if (circularCells.has(nodeKey(formula.sheet, formula.cell)) && !formula.warnings.includes('circular')) {
       formula.warnings.push('circular');
-      warnings.push({ kind: 'circular', sheet: formula.sheet, cell: formula.cell, detail: 'This sheet is in a cross-sheet cycle' });
+      warnings.push({ kind: 'circular', sheet: formula.sheet, cell: formula.cell, detail: 'This cell is in a formula dependency cycle' });
     }
   }
   const sheets = sheetNames.map(name => ({

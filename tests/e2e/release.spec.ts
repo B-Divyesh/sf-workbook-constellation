@@ -47,6 +47,30 @@ test('shows a calm release-page fallback when no release exists', async ({ page 
   expect(pageErrors).toEqual([]);
 });
 
+test('selects Intel and Apple silicon macOS disk images independently', async ({ browser }) => {
+  const release = {
+    html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.3',
+    assets: [
+      { name: 'Workbook.Constellation_0.1.3_aarch64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.3/Workbook.Constellation_0.1.3_aarch64.dmg' },
+      { name: 'Workbook.Constellation_0.1.3_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.3/Workbook.Constellation_0.1.3_x64.dmg' }
+    ]
+  };
+  const intel = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });
+  const intelPage = await intel.newPage();
+  await intelPage.route(apiUrl, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(release) }));
+  await intelPage.goto('/');
+  await expect(intelPage.getByRole('link', { name: 'Download for macOS (Intel) (external)' })).toHaveAttribute('href', /_x64\.dmg$/);
+  await intel.close();
+
+  const arm = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });
+  await arm.addInitScript(() => Object.defineProperty(navigator, 'userAgentData', { value: { getHighEntropyValues: async () => ({ architecture: 'arm' }) } }));
+  const armPage = await arm.newPage();
+  await armPage.route(apiUrl, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(release) }));
+  await armPage.goto('/');
+  await expect(armPage.getByRole('link', { name: 'Download for macOS (Apple silicon) (external)' })).toHaveAttribute('href', /_aarch64\.dmg$/);
+  await arm.close();
+});
+
 test('an installed service worker receives a later deployment shell when only HTML changes', async ({ browser }) => {
   const site = resolve(process.cwd(), 'dist/site');
   let revision = 'revision-1';

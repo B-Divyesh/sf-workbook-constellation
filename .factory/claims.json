@@ -49,6 +49,13 @@
     "sandbox": "fresh landing context; assert price, free HTML term, and the exact Sociobot checkout URL"
   },
   {
+    "id": "refund-revocation",
+    "claim": "A refunded purchase revokes its license and removes paid features while free HTML reports remain available.",
+    "where": "terms",
+    "test": "npm run test:e2e -- --grep @claim:refund-revocation",
+    "sandbox": "sample audit with a stale valid verdict; mock a revoked Sociobot verification and assert JSON export is removed while HTML export remains"
+  },
+  {
     "id": "free-sheet-limit",
     "claim": "The free tier accepts workbooks with up to eight sheets; a valid license removes the eight-sheet cap.",
     "where": "landing facts, upload recovery, and README",

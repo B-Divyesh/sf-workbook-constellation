@@ -21,6 +21,11 @@ describe('formula parser', () => {
       { sheet: 'Sales plan', ref: '$B$2:$B$9', external: undefined },
       { sheet: 'Inputs', ref: 'C4', external: undefined }
     ]);
+    expect(parseFormula('IF(1=1,"Inputs!A1","")', 'Output').precedents).toEqual([]);
+  });
+
+  it('ignores cell-looking text inside Excel string literals', () => {
+    expect(parseFormula('IF(1=1,"Inputs!A1","")', 'Output').precedents).toEqual([]);
   });
 
   it('@claim:read-only-boundaries reports formulas without evaluating macro content', () => {
@@ -45,6 +50,14 @@ describe('formula parser', () => {
       { sheet: 'B', cell: 'A1', formula: '=A!A1', precedents: [{ sheet: 'A', ref: 'A1' }], warnings: [] }
     ]);
     expect(result.warnings.filter(w => w.kind === 'circular')).toHaveLength(2);
+  });
+
+  it('does not report independent bidirectional sheet references as a cell cycle', () => {
+    const result = buildAudit('back-links.xlsx', ['A', 'B'], [
+      { sheet: 'A', cell: 'B1', formula: '=B!A1', precedents: [{ sheet: 'B', ref: 'A1' }], warnings: [] },
+      { sheet: 'B', cell: 'B1', formula: '=A!A1', precedents: [{ sheet: 'A', ref: 'A1' }], warnings: [] }
+    ]);
+    expect(result.warnings.filter(warning => warning.kind === 'circular')).toEqual([]);
   });
 
   it('@claim:warning-types identifies external, opaque, and circular formulas', () => {

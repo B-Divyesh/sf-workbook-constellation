@@ -2,7 +2,7 @@ import './style.css';
 import { auditWorkbook } from './parser';
 import { sampleAudit } from './sample';
 import { downloadJson, downloadReport } from './report';
-import { captureLicense, checkoutUrl, hasPaidLicense, saveLicense, verifyLicense } from './license';
+import { captureLicense, checkoutUrl, hasPaidLicense, hasSavedLicense, saveLicense, verifyLicense } from './license';
 import type { Audit, SheetEdge } from './types';
 import { loadDownload } from './release';
 import { escapeHtml as text } from './html';
@@ -13,6 +13,7 @@ let selectedSheet = '';
 let selectedEdge: SheetEdge | null = null;
 let isDemo = false;
 let auditFromDemo = false;
+let licenseNotice = '';
 
 captureLicense();
 
@@ -23,7 +24,7 @@ function shell(content: string) {
   ${isDemo ? `<aside class="demo-bar" aria-label="Demo mode"><span><strong>Demo</strong> — sample data, nothing is saved</span><div><button data-action="reset-demo">Reset demo</button><button data-action="leave-demo">Start for real</button></div></aside>` : ''}
   <header class="site-header"><a class="wordmark" href="/" data-link>${icon}<span>Workbook<br>Constellation</span></a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/#how">How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>
   ${content}
-  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.2 · Original generated artwork</p></footer>`;
+  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.3 · Original generated artwork</p></footer>`;
 }
 
 function landing() {
@@ -56,12 +57,13 @@ function graphMarkup(item: Audit) {
     const a = positions.get(edge.from), b = positions.get(edge.to);
     if (!a || !b) return '';
     const active = !selectedSheet || edge.from === selectedSheet || edge.to === selectedSheet;
-    return `<button class="edge-hit ${active ? 'active' : ''}" data-edge="${i}" aria-label="${text(edge.from)} to ${text(edge.to)}, ${edge.count} references" style="--mx:${(a.x + b.x) / 2 + 70}px;--my:${(a.y + b.y) / 2 + 28}px"></button><svg class="edge ${active ? 'active' : ''}" aria-hidden="true"><line x1="${a.x + 70}" y1="${a.y + 28}" x2="${b.x + 70}" y2="${b.y + 28}"/></svg>`;
+    const selected = selectedEdge === edge;
+    return `<button class="edge-hit ${active ? 'active' : ''}" data-edge="${i}" aria-pressed="${selected}" aria-label="${text(edge.from)} to ${text(edge.to)}, ${edge.count} references" style="--mx:${(a.x + b.x) / 2 + 70}px;--my:${(a.y + b.y) / 2 + 28}px"></button><svg class="edge ${selected || active && !selectedEdge ? 'active' : ''}" aria-hidden="true"><line x1="${a.x + 70}" y1="${a.y + 28}" x2="${b.x + 70}" y2="${b.y + 28}"/></svg>`;
   }).join('');
   const nodes = item.sheets.map(sheet => {
     const p = positions.get(sheet.name)!;
     const related = !selectedSheet || sheet.name === selectedSheet || item.edges.some(e => (e.from === selectedSheet && e.to === sheet.name) || (e.to === selectedSheet && e.from === sheet.name));
-    return `<button class="node ${sheet.name === selectedSheet ? 'selected' : ''} ${related ? '' : 'dim'}" data-sheet="${text(encodeURIComponent(sheet.name))}" style="--x:${p.x}px;--y:${p.y}px"><strong>${text(sheet.name)}</strong><span>${sheet.formulaCount} formulas · ${sheet.inbound} in · ${sheet.outbound} out</span></button>`;
+    return `<button class="node ${sheet.name === selectedSheet ? 'selected' : ''} ${related ? '' : 'dim'}" data-sheet="${text(encodeURIComponent(sheet.name))}" aria-pressed="${sheet.name === selectedSheet}" style="--x:${p.x}px;--y:${p.y}px"><strong>${text(sheet.name)}</strong><span>${sheet.formulaCount} formulas · ${sheet.inbound} in · ${sheet.outbound} out</span></button>`;
   }).join('');
   return `<div class="graph-scroll"><div class="graph" style="--graph-width:${width}px;--graph-height:${height}px">${paths}${nodes}</div></div>`;
 }
@@ -70,7 +72,7 @@ function auditPage() {
   if (!audit) return landing();
   document.title = `${isDemo ? 'Demo' : 'Audit'} — Workbook Constellation`;
   const details = selectedEdge ? `<p class="path-title"><strong>${text(selectedEdge.from)}</strong> → <strong>${text(selectedEdge.to)}</strong></p>${selectedEdge.formulas.map(f => `<article><code>${text(f.source)}</code><span>feeds</span><code>${text(f.destination)}</code><pre>${text(f.formula)}</pre></article>`).join('')}` : `<p>Select a path to see its source cells and formulas.</p>`;
-  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace dependencies in ${text(audit.fileName)}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} cross-sheet paths</p></div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export handoff report</button>${hasPaidLicense() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
+  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace dependencies in ${text(audit.fileName)}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} cross-sheet paths</p>${licenseNotice ? `<p class="license-notice" role="status">${text(licenseNotice)}</p>` : ''}</div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export handoff report</button>${hasPaidLicense() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
   <section class="audit-layout"><div class="map-panel"><div class="map-tools"><h2>Sheet map</h2><button data-action="clear-selection">Show all paths</button></div>${graphMarkup(audit)}<p class="graph-help">Tab to a sheet or path. Press Enter to inspect it.</p></div><aside class="proof-panel" aria-labelledby="proof-title"><p class="section-kicker">Cell-level proof</p><h2 id="proof-title">Path evidence</h2><div id="proof-details">${details}</div></aside></section>
   <section class="warning-panel" aria-labelledby="warning-title"><div><p class="section-kicker">Review before editing</p><h2 id="warning-title">${audit.warnings.length} warning${audit.warnings.length === 1 ? '' : 's'} found</h2></div>${audit.warnings.length ? `<ul>${audit.warnings.map(w => `<li><span class="warning-kind">${text(w.kind)}</span><code>${text(w.sheet)}!${text(w.cell)}</code><span>${text(w.detail)}</span></li>`).join('')}</ul>` : '<p>No external links, cross-sheet cycles, or opaque formulas were found.</p>'}</section>
   <section class="formula-table" aria-labelledby="formula-title"><h2 id="formula-title">Formula index</h2><div><table><thead><tr><th>Cell</th><th>Formula</th><th>Sources</th></tr></thead><tbody>${audit.formulas.map(f => `<tr><td><code>${text(f.sheet)}!${text(f.cell)}</code></td><td><code>${text(f.formula)}</code></td><td>${f.precedents.map(p => `${text(p.sheet)}!${text(p.ref)}`).join(', ') || 'None found'}</td></tr>`).join('')}</tbody></table></div></section></main>`);
@@ -131,19 +133,35 @@ function bind() {
     if (action === 'new-file') { audit = null; navigate('/'); setTimeout(() => document.querySelector<HTMLElement>('[for="file"]')?.focus(), 0); }
     if (action === 'export-html' && audit) downloadReport(audit);
     if (action === 'export-json' && audit && hasPaidLicense()) downloadJson(audit);
-    if (action === 'clear-selection') { selectedSheet = ''; selectedEdge = null; render(location.pathname); }
+    if (action === 'clear-selection') { selectedSheet = ''; selectedEdge = null; render(location.pathname); document.querySelector<HTMLElement>('[data-action="clear-selection"]')?.focus(); }
   }));
   document.querySelector<HTMLInputElement>('#file')?.addEventListener('change', e => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) handleFile(file); });
   const zone = document.querySelector<HTMLElement>('#drop-zone');
   zone?.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
   zone?.addEventListener('dragleave', () => zone.classList.remove('dragging'));
   zone?.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragging'); const file = e.dataTransfer?.files[0]; if (file) handleFile(file); });
-  document.querySelectorAll<HTMLButtonElement>('[data-sheet]').forEach(button => button.addEventListener('click', () => { selectedSheet = decodeURIComponent(button.dataset.sheet!); selectedEdge = null; render(location.pathname); }));
-  document.querySelectorAll<HTMLButtonElement>('[data-edge]').forEach(button => button.addEventListener('click', () => { selectedEdge = audit?.edges[Number(button.dataset.edge)] || null; selectedSheet = ''; render(location.pathname); document.querySelector('#proof-title')?.scrollIntoView({ block: 'nearest' }); }));
+  document.querySelectorAll<HTMLButtonElement>('[data-sheet]').forEach(button => button.addEventListener('click', () => {
+    const encodedSheet = button.dataset.sheet!;
+    selectedSheet = decodeURIComponent(encodedSheet);
+    selectedEdge = null;
+    render(location.pathname);
+    document.querySelector<HTMLButtonElement>(`[data-sheet="${CSS.escape(encodedSheet)}"]`)?.focus({ preventScroll: true });
+  }));
+  document.querySelectorAll<HTMLButtonElement>('[data-edge]').forEach(button => button.addEventListener('click', () => {
+    const edgeIndex = Number(button.dataset.edge);
+    selectedEdge = audit?.edges[edgeIndex] || null;
+    selectedSheet = '';
+    render(location.pathname);
+    document.querySelector<HTMLButtonElement>(`[data-edge="${edgeIndex}"]`)?.focus({ preventScroll: true });
+    document.querySelector('#proof-title')?.scrollIntoView({ block: 'nearest' });
+  }));
   document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', async e => { e.preventDefault(); const field = new FormData(e.currentTarget as HTMLFormElement).get('license')?.toString() || ''; const status = document.querySelector('#license-status')!; saveLicense(field); status.textContent = 'Checking this license…'; status.textContent = await verifyLicense() ? 'License verified. Larger workbooks are ready.' : 'This license is not active. Check the token and try again.'; });
 }
 
 addEventListener('popstate', () => { render(); focusRouteHeading(); });
-void verifyLicense().then(valid => { if (valid && audit) render(); });
+void verifyLicense().then(valid => {
+  if (!valid && hasSavedLicense()) licenseNotice = 'This license is no longer active. HTML reports remain available.';
+  if (audit) render();
+});
 render();
 if ('serviceWorker' in navigator && !('__TAURI_INTERNALS__' in window)) addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));

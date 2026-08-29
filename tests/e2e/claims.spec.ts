@@ -134,6 +134,24 @@ test('@claim:license-terms states and applies the $19 one-time Plus terms', asyn
   await expect(page.getByText('Refunds revoke the related license.')).toBeVisible();
 });
 
+test('@claim:refund-revocation removes paid features after a revoked verification', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('sb_license:workbook-constellation', 'refunded-token');
+    localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: 0 }));
+  });
+  let verificationUrl = '';
+  await page.route('https://api.sociobot.in/api/v1/products/workbook-constellation/verify?**', route => {
+    verificationUrl = route.request().url();
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'revoked', expires_at: null }) });
+  });
+  await page.goto('/demo');
+  await expect(page.getByRole('status').filter({ hasText: 'license is no longer active' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export JSON evidence' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Export handoff report' })).toBeVisible();
+  expect(verificationUrl).toContain('license=refunded-token');
+  expect(verificationUrl).not.toContain('Northstar');
+});
+
 test('@claim:escaped-evidence renders workbook-controlled text literally in the UI and report', async ({ page }) => {
   const formula = 'IF(\'Input<img src=x>\'!A1=1,"<img src=x>","")';
   const book = XLSX.utils.book_new();
@@ -212,6 +230,27 @@ test('supports the 390px keyboard path and a designed error', async ({ page }) =
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
   await page.setInputFiles('#file', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a workbook') });
   await expect(page.getByRole('status').first()).toContainText('not an XLSX');
+});
+
+test('shows file focus and preserves focused selected graph controls', async ({ page }) => {
+  await page.goto('/');
+  const input = page.locator('#file');
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect(page.locator('label[for="file"]')).toHaveCSS('outline-width', '3px');
+
+  await page.goto('/demo');
+  const sheet = page.locator('[data-sheet="Forecast"]');
+  await sheet.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-sheet="Forecast"]')).toBeFocused();
+  await expect(page.locator('[data-sheet="Forecast"]')).toHaveAttribute('aria-pressed', 'true');
+
+  const edge = page.getByRole('button', { name: /Forecast to Dashboard/ });
+  await edge.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: /Forecast to Dashboard/ })).toBeFocused();
+  await expect(page.getByRole('button', { name: /Forecast to Dashboard/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('keeps persistent demo actions at least 44px at the 390px viewport', async ({ page }) => {

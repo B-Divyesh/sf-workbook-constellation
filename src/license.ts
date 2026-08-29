@@ -24,6 +24,10 @@ export function hasPaidLicense() {
   try { return JSON.parse(cached).valid === true; } catch { return false; }
 }
 
+export function hasSavedLicense() {
+  return Boolean(localStorage.getItem(key));
+}
+
 export async function verifyLicense() {
   const token = localStorage.getItem(key);
   if (!token) return false;

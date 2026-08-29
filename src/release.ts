@@ -1,10 +1,20 @@
 const repo = 'B-Divyesh/sf-workbook-constellation';
 const releasePage = `https://github.com/${repo}/releases`;
 
-function platform() {
+type UserAgentData = { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string }> };
+
+async function platform() {
   const value = navigator.userAgent.toLowerCase();
-  if (value.includes('win')) return { label: 'Download for Windows', match: /\.(msi|exe)$/i };
-  if (value.includes('mac')) return { label: 'Download for macOS', match: /\.(dmg|app\.tar\.gz)$/i };
+  if (value.includes('win')) return { label: 'Download for Windows', match: /_x64(?:_en-US)?(?:-setup)?\.(?:msi|exe)$/i };
+  if (value.includes('mac')) {
+    const userAgentData = (navigator as Navigator & { userAgentData?: UserAgentData }).userAgentData;
+    let architecture = '';
+    try { architecture = (await userAgentData?.getHighEntropyValues?.(['architecture']))?.architecture || ''; } catch { /* use the user agent */ }
+    const arm = architecture.toLowerCase().includes('arm') || /\barm64\b|\baarch64\b/.test(value);
+    return arm
+      ? { label: 'Download for macOS (Apple silicon)', match: /_aarch64\.dmg$/i }
+      : { label: 'Download for macOS (Intel)', match: /_x64\.dmg$/i };
+  }
   return { label: 'Download for Linux', match: /\.(appimage|deb)$/i };
 }
 
@@ -22,7 +32,7 @@ export async function loadDownload() {
       data = { saved: Date.now(), release: await response.json() };
       localStorage.setItem(cacheKey, JSON.stringify(data));
     }
-    const choice = platform();
+    const choice = await platform();
     const asset = data.release.assets.find(item => choice.match.test(item.name));
     if (!asset) throw new Error('platform build unavailable');
     const assetUrl = new URL(asset.browser_download_url);
