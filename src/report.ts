@@ -11,7 +11,7 @@ export function downloadReport(audit: Audit) {
   const blob = new Blob([reportHtml(audit)], { type: 'text/html' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${audit.fileName.replace(/\.xlsx?$/i, '')}-handoff.html`;
+  link.download = `${audit.fileName.replace(/\.xls[xm]?$/i, '')}-handoff.html`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
@@ -20,7 +20,7 @@ export function downloadJson(audit: Audit) {
   const blob = new Blob([JSON.stringify(audit, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${audit.fileName.replace(/\.xlsx?$/i, '')}-evidence.json`;
+  link.download = `${audit.fileName.replace(/\.xls[xm]?$/i, '')}-evidence.json`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }

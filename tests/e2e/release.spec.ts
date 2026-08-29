@@ -49,10 +49,10 @@ test('shows a calm release-page fallback when no release exists', async ({ page 
 
 test('selects Intel and Apple silicon macOS disk images independently', async ({ browser }) => {
   const release = {
-    html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.3',
+    html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.4',
     assets: [
-      { name: 'Workbook.Constellation_0.1.3_aarch64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.3/Workbook.Constellation_0.1.3_aarch64.dmg' },
-      { name: 'Workbook.Constellation_0.1.3_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.3/Workbook.Constellation_0.1.3_x64.dmg' }
+      { name: 'Workbook.Constellation_0.1.4_aarch64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_aarch64.dmg' },
+      { name: 'Workbook.Constellation_0.1.4_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_x64.dmg' }
     ]
   };
   const intel = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });

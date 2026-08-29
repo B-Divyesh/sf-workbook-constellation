@@ -27,6 +27,15 @@ function workbook(sheetCount: number, formula = 'Sheet1!A1') {
   return Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }));
 }
 
+function referenceWorkbook(formula: string) {
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[1], [2]]), 'Inputs');
+  const output = XLSX.utils.aoa_to_sheet([[0]]);
+  output.A1 = { t: 'n', f: formula };
+  XLSX.utils.book_append_sheet(book, output, 'Output');
+  return Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }));
+}
+
 test('@claim:sample-map loads a useful eight-sheet dependency map', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Northstar-2026-plan.xlsx');
@@ -58,6 +67,37 @@ test('@claim:html-export exports a self-contained handoff report', async ({ page
   expect(text).toContain('Forecast!F12');
 });
 
+for (const { formula, ref } of [
+  { formula: '-Inputs!A1', ref: 'A1' },
+  { formula: '1-Inputs!A1', ref: 'A1' },
+  { formula: 'A1-Inputs!B2', ref: 'B2' }
+]) {
+  test(`keeps arithmetic outside workbook references in =${formula}`, async ({ page }) => {
+    await page.goto('/');
+    await page.setInputFiles('#file', {
+      name: 'arithmetic.xlsm',
+      mimeType: 'application/vnd.ms-excel.sheet.macroEnabled.12',
+      buffer: referenceWorkbook(formula)
+    });
+    await expect(page.getByText('2 sheets · 1 formulas · 1 cross-sheet paths')).toBeVisible();
+    await expect(page.locator('.node strong')).toHaveText(['Inputs', 'Output']);
+    const path = page.getByRole('button', { name: /Inputs to Output/ });
+    await expect(path).toBeVisible();
+    await path.click();
+    await expect(page.getByLabel('Path evidence').locator('code').filter({ hasText: new RegExp(`^Inputs!${ref}$`) })).toBeVisible();
+    await expect(page.locator('.formula-table code').filter({ hasText: `=${formula}` })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export handoff report' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('arithmetic-handoff.html');
+    const stream = await download.createReadStream();
+    let report = '';
+    for await (const chunk of stream!) report += chunk.toString();
+    expect(report).toContain(`<td>Inputs!${ref}</td><td>Output!A1</td><td><code>=${formula}</code></td>`);
+  });
+}
+
 test('@claim:json-export gives licensed users machine-readable evidence', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
   await page.goto('/demo');
@@ -65,6 +105,24 @@ test('@claim:json-export gives licensed users machine-readable evidence', async 
   await page.getByRole('button', { name: 'Export JSON evidence' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('Northstar-2026-plan-evidence.json');
+});
+
+test('strips XLSM from HTML and JSON export base names', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
+  await page.goto('/');
+  await page.setInputFiles('#file', {
+    name: 'macro-model.xlsm',
+    mimeType: 'application/vnd.ms-excel.sheet.macroEnabled.12',
+    buffer: referenceWorkbook('Inputs!A1')
+  });
+  for (const { button, filename } of [
+    { button: 'Export handoff report', filename: 'macro-model-handoff.html' },
+    { button: 'Export JSON evidence', filename: 'macro-model-evidence.json' }
+  ]) {
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: button }).click();
+    expect((await downloadPromise).suggestedFilename()).toBe(filename);
+  }
 });
 
 test('@claim:local-only sends no workbook or demo data off origin', async ({ page }) => {

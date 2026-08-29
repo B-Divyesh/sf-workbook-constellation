@@ -1,7 +1,10 @@
 import * as XLSX from 'xlsx';
 import type { Audit, FormulaRecord, SheetEdge, WarningKind } from './types';
 
-const cellRef = /(?:(?:'((?:[^']|'')+)'|([A-Za-z0-9_. \[\]-]+))!)?(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/g;
+// Excel quotes sheet names containing spaces or arithmetic punctuation. Keep
+// the unquoted alternative token-shaped so operators such as the minus in
+// `1-Inputs!A1` cannot be absorbed into a workbook reference.
+const cellRef = /(?:(?:'((?:[^']|'')+)'|((?:\[[^\]\r\n]+\])?[\p{L}_][\p{L}\p{N}_.]*))!)?(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/gu;
 const opaqueFunctions = /\b(?:INDIRECT|OFFSET|WEBSERVICE|CUBE(?:VALUE|MEMBER)|RTD)\s*\(/i;
 const externalBook = /\[([^\]]+)\]/;
 

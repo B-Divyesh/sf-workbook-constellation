@@ -1,6 +1,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 import { auditWorkbook, buildAudit, parseFormula } from '../src/parser';
+import { reportHtml } from '../src/report';
+
+const arithmeticReferences = [
+  { formula: '-Inputs!A1', ref: 'A1' },
+  { formula: '1-Inputs!A1', ref: 'A1' },
+  { formula: 'A1-Inputs!B2', ref: 'B2' }
+] as const;
+
+function arithmeticWorkbook(formula: string) {
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[1], [2]]), 'Inputs');
+  const output = XLSX.utils.aoa_to_sheet([[0]]);
+  output.A1 = { t: 'n', f: formula };
+  XLSX.utils.book_append_sheet(book, output, 'Output');
+  return XLSX.write(book, { type: 'array', bookType: 'xlsx' });
+}
 
 describe('formula parser', () => {
   it('extracts quoted sheets, ranges, and external links', () => {
@@ -26,6 +42,40 @@ describe('formula parser', () => {
 
   it('ignores cell-looking text inside Excel string literals', () => {
     expect(parseFormula('IF(1=1,"Inputs!A1","")', 'Output').precedents).toEqual([]);
+  });
+
+  it.each(arithmeticReferences)('keeps arithmetic outside the sheet token in =$formula', ({ formula, ref }) => {
+    expect(parseFormula(formula, 'Output').precedents).toContainEqual({
+      sheet: 'Inputs',
+      ref,
+      external: undefined
+    });
+    expect(parseFormula(formula, 'Output').precedents.some(precedent => precedent.sheet.includes('-'))).toBe(false);
+  });
+
+  it('preserves arithmetic characters inside a quoted sheet token', () => {
+    expect(parseFormula("'1-Inputs'!A1", 'Output').precedents).toEqual([
+      { sheet: '1-Inputs', ref: 'A1', external: undefined }
+    ]);
+  });
+
+  it.each(arithmeticReferences)('builds the real Inputs to Output graph for =$formula', ({ formula, ref }) => {
+    const result = auditWorkbook(arithmeticWorkbook(formula), 'arithmetic.xlsx');
+    expect(result.edges).toHaveLength(1);
+    expect(result.edges[0]).toMatchObject({
+      from: 'Inputs',
+      to: 'Output',
+      count: 1,
+      formulas: [{ source: `Inputs!${ref}`, destination: 'Output!A1', formula: `=${formula}` }]
+    });
+  });
+
+  it.each(arithmeticReferences)('exports truthful HTML evidence for =$formula', ({ formula, ref }) => {
+    const result = auditWorkbook(arithmeticWorkbook(formula), 'arithmetic.xlsx');
+    const html = reportHtml(result);
+    expect(html).toContain(`<td>Inputs!${ref}</td><td>Output!A1</td><td><code>=${formula}</code></td>`);
+    expect(html).not.toContain(`<td>-Inputs!${ref}</td>`);
+    expect(html).not.toContain(`<td>1-Inputs!${ref}</td>`);
   });
 
   it('@claim:read-only-boundaries reports formulas without evaluating macro content', () => {

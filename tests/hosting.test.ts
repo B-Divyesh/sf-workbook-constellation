@@ -38,13 +38,13 @@ describe('static deployment policy', () => {
   it('uses shasum and the Intel asset on a Mac without sha256sum', () => {
     const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-mac-installer-'));
     const bin = join(directory, 'bin');
-    const appName = 'Workbook.Constellation_0.1.3_x64.dmg';
+    const appName = 'Workbook.Constellation_0.1.4_x64.dmg';
     mkdirSync(bin);
     for (const command of ['basename', 'cp', 'cut', 'grep', 'head', 'mktemp', 'rm', 'sed']) {
       symlinkSync(`/usr/bin/${command}`, join(bin, command));
     }
     writeFileSync(join(bin, 'uname'), '#!/bin/sh\n[ "$1" = "-s" ] && printf Darwin || printf x86_64\n');
-    writeFileSync(join(bin, 'curl'), ['#!/bin/sh', 'output=""', 'last=""', 'while [ "$#" -gt 0 ]; do', '  if [ "$1" = "-o" ]; then output="$2"; shift 2; continue; fi', '  last="$1"; shift', 'done', 'case "$last" in', `  *api.github.com*) printf '{"browser_download_url": "https://downloads.example/Workbook.Constellation_0.1.3_aarch64.dmg"}\\n{"browser_download_url": "https://downloads.example/${appName}"}\\n' ;;`, `  *${appName}) printf installer > "$output" ;;`, `  *SHA256SUMS) printf 'portablehash  ${appName}\\n' > "$output" ;;`, 'esac'].join('\n'));
+    writeFileSync(join(bin, 'curl'), ['#!/bin/sh', 'output=""', 'last=""', 'while [ "$#" -gt 0 ]; do', '  if [ "$1" = "-o" ]; then output="$2"; shift 2; continue; fi', '  last="$1"; shift', 'done', 'case "$last" in', `  *api.github.com*) printf '{"browser_download_url": "https://downloads.example/Workbook.Constellation_0.1.4_aarch64.dmg"}\\n{"browser_download_url": "https://downloads.example/${appName}"}\\n' ;;`, `  *${appName}) printf installer > "$output" ;;`, `  *SHA256SUMS) printf 'portablehash  ${appName}\\n' > "$output" ;;`, 'esac'].join('\n'));
     writeFileSync(join(bin, 'shasum'), '#!/bin/sh\nprintf "portablehash  %s\\n" "$3"\n');
     for (const command of ['uname', 'curl', 'shasum']) chmodSync(join(bin, command), 0o755);
     try {
@@ -70,7 +70,7 @@ describe('static deployment policy', () => {
     const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-installer-'));
     const bin = join(directory, 'bin');
     const marker = join(directory, 'launched');
-    const appName = 'Workbook.Constellation_0.1.3_amd64.AppImage';
+    const appName = 'Workbook.Constellation_0.1.4_amd64.AppImage';
     mkdirSync(bin);
     const curl = join(bin, 'curl');
     const checksum = join(bin, 'sha256sum');
@@ -87,7 +87,7 @@ describe('static deployment policy', () => {
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(statSync(join(directory, appName)).mode & 0o111).not.toBe(0);
       expect(readFileSync(marker, 'utf8')).toBe('launched');
-      expect(output).toContain('made Workbook.Constellation_0.1.3_amd64.AppImage executable, and launched');
+      expect(output).toContain('made Workbook.Constellation_0.1.4_amd64.AppImage executable, and launched');
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
