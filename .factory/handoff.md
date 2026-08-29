@@ -60,9 +60,9 @@ privacy/local parsing, offline demo, and behavioral claims coverage.
   privacy, terms, and direct 404 at desktop and 390 × 844. Keyboard focus,
   skip links, 44 px controls, reduced motion, and the mobile first screen are
   covered by browser regressions.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed after the final
-  production build: HTTP 200, 588 ms load, zero console errors, title,
-  `lang=en`, one H1, main landmark, named controls, and complete image alts.
+- `/opt/fleet/lib/verify-url.sh` passed against the final live URL: HTTP 200,
+  968 ms load, zero console errors, title, `lang=en`, one H1, main landmark,
+  named controls, and complete image alts.
 
 ### Release and live verification
 
