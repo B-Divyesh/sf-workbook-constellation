@@ -133,8 +133,8 @@ describe('static deployment policy', () => {
 
   it('@claim:release-workflow records a successful tag build with every desktop target and release metadata', () => {
     const workflow = readFileSync(new URL('.github/workflows/release.yml', root), 'utf8');
-    const release = JSON.parse(readFileSync(new URL('tests/fixtures/release-v0.1.4.json', root), 'utf8')) as { target_commitish: string; assets: string[] };
-    const run = JSON.parse(readFileSync(new URL('tests/fixtures/release-run-v0.1.4.json', root), 'utf8')) as { head_sha: string; status: string; conclusion: string; event: string };
+    const release = JSON.parse(readFileSync(new URL('tests/fixtures/release-v0.1.8.json', root), 'utf8')) as { target_commitish: string; assets: string[] };
+    const run = JSON.parse(readFileSync(new URL('tests/fixtures/release-run-v0.1.8.json', root), 'utf8')) as { head_sha: string; status: string; conclusion: string; event: string; jobs: Array<{ name: string; conclusion: string; verified_step?: string }> };
     expect(workflow).toContain("tags: ['v*']");
     expect(workflow).toContain('ubuntu-22.04');
     expect(workflow).toContain('windows-latest');
@@ -143,6 +143,13 @@ describe('static deployment policy', () => {
     expect(workflow).toContain('SHA256SUMS');
     expect(workflow).toContain('latest.json');
     expect(run).toMatchObject({ head_sha: release.target_commitish, status: 'completed', conclusion: 'success', event: 'push' });
+    expect(run.jobs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'build (ubuntu-22.04)', conclusion: 'success', verified_step: 'Run unit tests' }),
+      expect.objectContaining({ name: 'build (windows-latest)', conclusion: 'success', verified_step: 'Exercise Windows installer checksum handling' }),
+      expect.objectContaining({ name: 'build (macos-latest, --target x86_64-apple-darwin)', conclusion: 'success' }),
+      expect.objectContaining({ name: 'build (macos-latest, --target aarch64-apple-darwin)', conclusion: 'success' }),
+      expect.objectContaining({ name: 'manifest', conclusion: 'success', verified_step: 'Write checksums and latest manifest' })
+    ]));
     expect(release.assets).toEqual(expect.arrayContaining([
       'SHA256SUMS', 'latest.json',
       expect.stringMatching(/_amd64\.AppImage$/),

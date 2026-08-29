@@ -1,0 +1,19 @@
+{
+  "tag_name": "v0.1.8",
+  "target_commitish": "b1a1266ddb359e95b7ed92f58c10ce4510ae9120",
+  "published_at": "2026-08-29T18:08:58Z",
+  "html_url": "https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.8",
+  "assets": [
+    "latest.json",
+    "SHA256SUMS",
+    "Workbook.Constellation-0.1.8-1.x86_64.rpm",
+    "Workbook.Constellation_0.1.8_aarch64.dmg",
+    "Workbook.Constellation_0.1.8_amd64.AppImage",
+    "Workbook.Constellation_0.1.8_amd64.deb",
+    "Workbook.Constellation_0.1.8_x64-setup.exe",
+    "Workbook.Constellation_0.1.8_x64.dmg",
+    "Workbook.Constellation_0.1.8_x64_en-US.msi",
+    "Workbook.Constellation_aarch64.app.tar.gz",
+    "Workbook.Constellation_x64.app.tar.gz"
+  ]
+}
