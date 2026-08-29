@@ -1,6 +1,6 @@
 {
   "url": "https://workbook-constellation.sociobot.in",
-  "loadMs": 640,
+  "loadMs": 633,
   "errors": [],
   "a11y": {
     "title": "Workbook Constellation — Map workbook formulas",
@@ -9,6 +9,6 @@
     "main": true,
     "imgsMissingAlt": 0,
     "buttonsUnlabeled": 0,
-    "textLength": 2278
+    "textLength": 2304
   }
 }

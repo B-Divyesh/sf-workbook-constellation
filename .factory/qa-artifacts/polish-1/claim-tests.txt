@@ -1,0 +1,30 @@
+Workbook Constellation claim verification — 2026-08-29 UTC
+Fresh clone commit: 1d10c7e
+Install: npm ci — PASS, 0 vulnerabilities
+
+PASS @claim:sample-map — npm run test:e2e -- --grep @claim:sample-map
+PASS @claim:path-evidence — npm run test:e2e -- --grep @claim:path-evidence
+PASS @claim:no-account — npm run test:e2e -- --grep @claim:no-account
+PASS @claim:html-export — npm run test:e2e -- --grep @claim:html-export
+PASS @claim:local-only — npm run test:e2e -- --grep @claim:local-only
+PASS @claim:runtime-privacy — npm run test:e2e -- --grep @claim:runtime-privacy
+PASS @claim:desktop-local-parsing — npm run test:e2e -- --grep @claim:desktop-local-parsing
+PASS @claim:json-export — npm run test:e2e -- --grep @claim:json-export
+PASS @claim:license-terms — npm run test:e2e -- --grep @claim:license-terms
+PASS @claim:checkout-handoff — npm run test:live -- --grep @claim:checkout-handoff
+PASS @claim:refund-revocation — npm run test:e2e -- --grep @claim:refund-revocation
+PASS @claim:free-sheet-limit — npm run test:e2e -- --grep @claim:free-sheet-limit
+PASS @claim:input-boundaries — npm run test:e2e -- --grep @claim:input-boundaries
+PASS @claim:encrypted-input — npm run test:e2e -- --grep @claim:encrypted-input
+PASS @claim:offline-reload — npm run test:e2e -- --grep @claim:offline-reload
+PASS @claim:read-only-boundaries — npm run test:unit -- --testNamePattern @claim:read-only-boundaries
+PASS @claim:formula-syntax — npm run test:unit -- --testNamePattern @claim:formula-syntax
+PASS @claim:warning-types — npm run test:unit -- --testNamePattern @claim:warning-types
+PASS @claim:addin-formulas — npm run test:unit -- --testNamePattern @claim:addin-formulas
+PASS @claim:escaped-evidence — npm run test:e2e -- --grep @claim:escaped-evidence
+PASS @claim:desktop-download — npm run test:e2e -- --grep @claim:desktop-download
+PASS @claim:release-workflow — npm run test:unit -- --testNamePattern @claim:release-workflow
+PASS @claim:installer-safety — npm run test:unit -- --testNamePattern @claim:installer-safety
+PASS @claim:linux-launch — npm run test:unit -- --testNamePattern @claim:linux-launch
+
+Result: 24/24 manifest entries passed individually from a fresh clone.
