@@ -3,8 +3,11 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as { version: string };
+
 export default defineConfig({
   base: '/',
+  define: { __APP_VERSION__: JSON.stringify(packageJson.version) },
   build: { target: 'es2022', sourcemap: true },
   server: { host: '127.0.0.1', port: 4173 },
   preview: { host: '127.0.0.1', port: 4173 },

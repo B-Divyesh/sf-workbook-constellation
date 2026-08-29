@@ -133,6 +133,10 @@ describe('static deployment policy', () => {
 
   it('@claim:release-workflow records a successful tag build with every desktop target and release metadata', () => {
     const workflow = readFileSync(new URL('.github/workflows/release.yml', root), 'utf8');
+    const packageJson = JSON.parse(readFileSync(new URL('package.json', root), 'utf8')) as { version: string };
+    const packageLock = JSON.parse(readFileSync(new URL('package-lock.json', root), 'utf8')) as { version: string; packages: Record<string, { version: string }> };
+    const tauri = JSON.parse(readFileSync(new URL('src-tauri/tauri.conf.json', root), 'utf8')) as { version: string };
+    const cargoVersion = readFileSync(new URL('src-tauri/Cargo.toml', root), 'utf8').match(/^version\s*=\s*"([^"]+)"/m)?.[1];
     const release = JSON.parse(readFileSync(new URL('tests/fixtures/release-v0.1.8.json', root), 'utf8')) as { target_commitish: string; assets: string[] };
     const run = JSON.parse(readFileSync(new URL('tests/fixtures/release-run-v0.1.8.json', root), 'utf8')) as { head_sha: string; status: string; conclusion: string; event: string; jobs: Array<{ name: string; conclusion: string; verified_step?: string }> };
     expect(workflow).toContain("tags: ['v*']");
@@ -142,6 +146,13 @@ describe('static deployment policy', () => {
     expect(workflow).toContain('Unsigned desktop builds.');
     expect(workflow).toContain('SHA256SUMS');
     expect(workflow).toContain('latest.json');
+    expect(workflow).toContain("APPIMAGE_EXTRACT_AND_RUN: '1'");
+    expect(workflow).toContain('install -y file ');
+    expect(workflow.match(/ref: \$\{\{ env\.RELEASE_TAG \}\}/g)).toHaveLength(2);
+    expect(workflow.match(/node scripts\/verify-release\.mjs/g)).toHaveLength(2);
+    expect([packageLock.version, packageLock.packages[''].version, tauri.version, cargoVersion]).toEqual([
+      packageJson.version, packageJson.version, packageJson.version, packageJson.version
+    ]);
     expect(run).toMatchObject({ head_sha: release.target_commitish, status: 'completed', conclusion: 'success', event: 'push' });
     expect(run.jobs).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'build (ubuntu-22.04)', conclusion: 'success', verified_step: 'Run unit tests' }),
@@ -158,6 +169,62 @@ describe('static deployment policy', () => {
       expect.stringMatching(/_aarch64\.dmg$/),
       expect.stringMatching(/_x64\.dmg$/)
     ]));
+  });
+
+  it('forces nested AppImage tools to extract when the Tauri command runs on Linux', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-tauri-runner-'));
+    const fakeCli = join(directory, 'fake-tauri.mjs');
+    const capture = join(directory, 'capture.json');
+    writeFileSync(fakeCli, `import { writeFileSync } from 'node:fs';\nwriteFileSync(process.env.TAURI_ENV_CAPTURE, JSON.stringify({ extract: process.env.APPIMAGE_EXTRACT_AND_RUN, args: process.argv.slice(2) }));\n`);
+    try {
+      execFileSync(process.execPath, [new URL('../scripts/run-tauri.mjs', import.meta.url).pathname, 'build', '--bundles', 'appimage'], {
+        env: { ...process.env, APPIMAGE_EXTRACT_AND_RUN: '0', TAURI_CLI_PATH: fakeCli, TAURI_ENV_CAPTURE: capture }
+      });
+      const actual = JSON.parse(readFileSync(capture, 'utf8')) as { extract: string; args: string[] };
+      expect(actual.args).toEqual(['build', '--bundles', 'appimage']);
+      expect(actual.extract).toBe(process.platform === 'linux' ? '1' : '0');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a release tag that does not point at the packaged candidate', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-provenance-'));
+    const runGit = (...args: string[]) => execFileSync('git', args, { cwd: directory, encoding: 'utf8' });
+    mkdirSync(join(directory, 'src-tauri'));
+    mkdirSync(join(directory, 'public'));
+    writeFileSync(join(directory, 'package.json'), '{"version":"1.2.3"}\n');
+    writeFileSync(join(directory, 'package-lock.json'), '{"version":"1.2.3","packages":{"":{"version":"1.2.3"}}}\n');
+    writeFileSync(join(directory, 'src-tauri', 'tauri.conf.json'), '{"version":"1.2.3"}\n');
+    writeFileSync(join(directory, 'src-tauri', 'Cargo.toml'), '[package]\nname = "fixture"\nversion = "1.2.3"\n');
+    writeFileSync(join(directory, 'public', '404.html'), '<footer>Version 1.2.3</footer>\n');
+    try {
+      runGit('init', '-q');
+      runGit('config', 'user.email', 'test@example.com');
+      runGit('config', 'user.name', 'Release Test');
+      runGit('add', '.');
+      runGit('commit', '-qm', 'candidate');
+      runGit('tag', 'v1.2.3');
+      const script = new URL('../scripts/verify-release.mjs', import.meta.url).pathname;
+      const verified = execFileSync(process.execPath, [script], {
+        cwd: directory,
+        encoding: 'utf8',
+        env: { ...process.env, RELEASE_TAG: 'v1.2.3' }
+      });
+      expect(verified).toContain('Release v1.2.3 matches version 1.2.3');
+
+      writeFileSync(join(directory, 'candidate-change.txt'), 'later product change\n');
+      runGit('add', '.');
+      runGit('commit', '-qm', 'change after tag');
+      expect(() => execFileSync(process.execPath, [script], {
+        cwd: directory,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: { ...process.env, RELEASE_TAG: 'v1.2.3' }
+      })).toThrow(/tag v1\.2\.3 points to .* but HEAD is/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('gives the static 404 the standard shell and complete metadata', () => {

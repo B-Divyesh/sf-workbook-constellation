@@ -1,6 +1,6 @@
 {
   "name": "workbook-constellation",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:live": "playwright test --config playwright.live.config.ts",
-    "tauri": "tauri"
+    "tauri": "node scripts/run-tauri.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.8.0",

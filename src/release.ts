@@ -1,6 +1,8 @@
+import { appVersion } from './version';
+
 const repo = 'B-Divyesh/sf-workbook-constellation';
 const releasePage = `https://github.com/${repo}/releases`;
-const shippedVersion = 'v0.1.9';
+const shippedVersion = `v${appVersion}`;
 
 type Release = { html_url: string; assets: Array<{ name: string; browser_download_url: string }> };
 type UserAgentData = { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string }> };
@@ -8,12 +10,12 @@ type UserAgentData = { getHighEntropyValues?: (hints: string[]) => Promise<{ arc
 const shippedRelease: Release = {
   html_url: `${releasePage}/tag/${shippedVersion}`,
   assets: [
-    'Workbook.Constellation_0.1.9_amd64.AppImage',
-    'Workbook.Constellation_0.1.9_amd64.deb',
-    'Workbook.Constellation_0.1.9_x64-setup.exe',
-    'Workbook.Constellation_0.1.9_x64_en-US.msi',
-    'Workbook.Constellation_0.1.9_aarch64.dmg',
-    'Workbook.Constellation_0.1.9_x64.dmg',
+    `Workbook.Constellation_${appVersion}_amd64.AppImage`,
+    `Workbook.Constellation_${appVersion}_amd64.deb`,
+    `Workbook.Constellation_${appVersion}_x64-setup.exe`,
+    `Workbook.Constellation_${appVersion}_x64_en-US.msi`,
+    `Workbook.Constellation_${appVersion}_aarch64.dmg`,
+    `Workbook.Constellation_${appVersion}_x64.dmg`,
     'SHA256SUMS'
   ].map(name => ({ name, browser_download_url: `${releasePage}/download/${shippedVersion}/${name}` }))
 };
