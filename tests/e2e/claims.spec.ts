@@ -354,8 +354,8 @@ test('announces and focuses each SPA destination on forward and browser-history 
   await expect(page.locator('#route-status')).toHaveText('Trace formula paths in Northstar-2026-plan.xlsx');
 });
 
-test('has no serious accessibility findings on landing and demo', async ({ page }) => {
-  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+test('has no serious accessibility findings on every public page', async ({ page }) => {
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404.html']) {
     await page.goto(path);
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations.filter(item => ['serious', 'critical'].includes(item.impact || ''))).toEqual([]);
@@ -405,7 +405,7 @@ test('keeps persistent demo actions at least 44px at the 390px viewport', async 
 
 test('keeps every visible mobile control at least 44 by 44 CSS pixels', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404.html']) {
     await page.goto(path);
     const shortControls = await page.locator('a, button, input').evaluateAll(elements => elements
       .filter(element => {
