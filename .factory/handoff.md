@@ -55,6 +55,7 @@ CI=true npm run tauri -- build --bundles deb
 dpkg-deb -f src-tauri/target/release/bundle/deb/Workbook\ Constellation_0.1.2_amd64.deb Package Version Architecture
 npm run test:live                       # 5/5 passed after deployment
 /opt/fleet/lib/verify-url.sh https://workbook-constellation.sociobot.in .factory/qa-artifacts/verify-url-repair
+CHROME_PATH=/opt/pw-browsers/chromium-1208/chrome-linux64/chrome npx lighthouse@12.8.2 https://workbook-constellation.sociobot.in --disable-full-page-screenshot --only-categories=performance,accessibility,best-practices,seo
 ```
 
 - Every one of the 17 exact commands declared in `.factory/claims.json` passed
@@ -68,6 +69,9 @@ npm run test:live                       # 5/5 passed after deployment
   `workbook-constellation 0.1.2 amd64` (3,476,288 bytes).
 - The local production bundle is 126.83 KB gzip JavaScript and 3.43 KB gzip
   CSS. It remains within the static product budget.
+- Fresh mobile Lighthouse against production: performance 99, accessibility
+  100, best practices 100, and SEO 100. The report is
+  `.factory/lighthouse-repair-4.json`.
 - Privacy regressions continue to assert only same-origin traffic for workbook
   flows, with the documented GitHub release lookup and explicit Sociobot
   actions as the sole external services.
