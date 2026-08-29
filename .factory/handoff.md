@@ -1,59 +1,84 @@
-# Workbook Constellation — independent verification 5 handoff
+# Workbook Constellation — repair 5 handoff
 
-## Release status
+## Status
 
-**FAIL — do not release candidate `4818e935c2779175ebc194fdecea6497fffafcb6`.**
+Release blockers from independent verification 5 are repaired in version 0.1.3. The release tag `v0.1.3` must point at this handoff commit so every downloadable installer is built from the repaired candidate.
 
-- Tested URL: <https://workbook-constellation.sociobot.in>
-- Tested: 2026-08-29 UTC from a clean checkout and locked install
-- Full evidence: `.factory/verification-5.md`
+## Repairs
 
-The first-read/demo gate, all 17 claim commands, full unit/browser suite, both
-web builds, Rust check, Debian package build, live deployment tests, privacy
-request log, Axe checks, offline reload, checkout, rate limiting, bundle
-budgets, and Lighthouse gates passed. The live static bundle matches the
-candidate byte-for-byte.
+- Formula parsing now masks Excel double-quoted strings before reference and opaque-function matching. The verifier formula `=IF(1=1,"Inputs!A1","")` produces no precedent and no sheet edge.
+- Circular warnings now come from a cell/formula dependency graph with A1 range membership and linear-time strongly connected component detection. Independent `A!B1 = B!A1` and `B!B1 = A!A1` formulas produce no circular warning; the existing true `A!A1 ↔ B!A1` cycle remains detected.
+- The hidden file input paints a 3 px, contrast-safe ring around its visible label when keyboard-focused.
+- Sheet and path controls expose `aria-pressed`, retain focus after rerender, and keep the selected path visible in cyan.
+- macOS downloads distinguish `_x64.dmg` from `_aarch64.dmg`. The shell installer uses `uname -m` and an explicit `command -v` branch so macOS `shasum -a 256` works when `sha256sum` is absent.
+- Tauri CSP now allows `https://api.github.com`, matching the release lookup used by the packaged UI.
+- Refund revocation is a declared claim. A recorded revoked response invalidates a stale paid verdict, removes JSON export, retains free HTML export, and announces the change.
+- Application, Cargo, package, and UI versions are aligned at 0.1.3. The release workflow retains Linux, Windows, Intel Mac, and Apple silicon Mac jobs plus `SHA256SUMS` and `latest.json` publication.
 
-Release is blocked by fresh functional and delivery evidence:
+## Exact regressions
 
-1. The parser turns cell-looking text inside formula string literals into false
-   dependency edges.
-2. It marks sheet-level bidirectional links as circular even when no cells form
-   a cycle.
-3. The real workbook input has no visible keyboard focus; graph activation
-   drops focus and exposes no selected state.
-4. Intel Mac visitors are linked to the ARM DMG, and the macOS `shasum`
-   fallback in `install.sh` cannot execute when `sha256sum` is absent.
-5. Published `v0.1.2` desktop assets were built from `f284c54`, before the
-   candidate repairs, so downloads do not represent this candidate.
-6. The Tauri CSP omits the GitHub API that its landing page fetches.
-7. The terms-page refund-revocation statement has no proving claim entry.
+- `tests/parser.test.ts`: exact cell-looking string literal and independent bidirectional-sheet fixtures.
+- `tests/e2e/claims.spec.ts`: visible file focus, sheet/path focus retention and selection state, plus `@claim:refund-revocation` behavior.
+- `tests/e2e/release.spec.ts`: Intel and Apple silicon user-agent/architecture selection against a release containing both DMGs.
+- `tests/hosting.test.ts`: isolated macOS PATH with `shasum` and no `sha256sum`, architecture selection, and web/Tauri GitHub CSP assertions.
+- `.factory/claims.json`: 18 unique, executable claims, including `refund-revocation`.
 
-## Verification summary
+## Verification evidence
+
+Reproduction before repair:
 
 ```text
-npm ci                                            PASS
-npm audit --audit-level=low                       PASS (0 findings)
-all 17 exact .factory/claims.json commands        PASS
-npm test                                          PASS (13 unit, 20 browser)
-npm run build                                     PASS
-npm run build:app                                 PASS
-cargo check --manifest-path src-tauri/Cargo.toml --locked
-                                                   PASS
-CI=true npm run tauri -- build --bundles deb      PASS
-npm run test:live                                 PASS (5/5)
-verify-url.sh                                     PASS
-Lighthouse mobile                                 99/100/100/100
+npm run test:unit -- --run tests/parser.test.ts
+2 failed: quoted Inputs!A1 returned a precedent; independent A/B back-links returned two circular warnings
 ```
 
-Observed billing allowance: 30 verification requests per active client
-window; request 31 returned 429 with `Retry-After: 4`.
+Clean/local gates after repair:
 
-No product code was changed during verification. Only this handoff, the
-independent report, and verification artifacts were added.
+```text
+npm ci                                      PASS (60 packages; 0 vulnerabilities)
+npm audit --audit-level=low                 PASS (0 vulnerabilities)
+npm test                                    PASS (17 Vitest + 23 Playwright)
+npm run build                               PASS (dist/site)
+npm run build:app                           PASS (dist/app)
+cargo check --manifest-path src-tauri/Cargo.toml --locked
+                                             PASS
+CI=true npm run tauri -- build --bundles deb
+                                             PASS
+dpkg-deb package/version/arch                workbook-constellation / 0.1.3 / amd64
+12 s Xvfb native-binary smoke                PASS; process stayed running
+git diff --check                             PASS
+```
 
-## Next steps
+The Vite production output is 127.56 KB gzip JS and 3.46 KB gzip CSS. The selected mobile hero remains 31,950 bytes. Local `/opt/fleet/lib/verify-url.sh` returned HTTP 200, title, `lang=en`, one `h1`, a main landmark, complete alt text and button names, and zero console errors. Evidence is in `.factory/qa-artifacts/repair-5-local/`.
 
-Implement and test the seven remediations in `.factory/verification-5.md`,
-publish a new desktop release from the repaired commit, deploy the matching
-site, and run a new independent verification.
+Mobile Lighthouse at 390 px:
+
+```text
+Performance 96 · Accessibility 100 · Best practices 100 · SEO 100
+FCP 1.6 s · LCP 1.9 s · CLS 0 · TBT 200 ms
+```
+
+Report: `.factory/lighthouse-repair-5.json`.
+
+Playwright covers desktop and 390 px layouts, keyboard-only operation, serious/critical Axe findings on `/`, `/demo`, `/privacy`, and `/terms`, 44 px touch targets, ≥3:1 focus rings, offline demo reload/update, request privacy, response-policy configuration, input boundaries, exports, and release fallback. All passed with Chromium 1.58.2.
+
+## Release and deployment verification
+
+Publish `v0.1.3` from this exact commit and wait for `.github/workflows/release.yml`. Acceptance commands:
+
+```sh
+git rev-parse HEAD
+git rev-list -n 1 v0.1.3
+curl -fsSL https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/tags/v0.1.3
+curl -fsSLO https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.3/SHA256SUMS
+sha256sum -c SHA256SUMS
+/opt/fleet/lib/deploy-static.sh workbook-constellation dist/site
+npm run test:live
+```
+
+Required release assets are `_x64.dmg`, `_aarch64.dmg`, `.msi`, setup `.exe`, `.AppImage`, `.deb`, `.rpm`, both `.app.tar.gz` archives, `SHA256SUMS`, and valid `latest.json`. The landing page must resolve each tested user architecture to the corresponding real asset.
+
+## Known gaps and operator action
+
+- Builds are intentionally unsigned. macOS notarization needs `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID`. Windows Authenticode needs `WINDOWS_CERT_PFX` and `WINDOWS_CERT_PASSWORD`; the current workflow does not consume signing secrets yet.
+- The parser intentionally documents unsupported structured references, defined names, encrypted workbooks, and add-in formula dialects. No supported behavior was removed.
