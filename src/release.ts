@@ -34,10 +34,12 @@ export async function loadDownload() {
     }
     const choice = await platform();
     const asset = data.release.assets.find(item => choice.match.test(item.name));
-    if (!asset) throw new Error('platform build unavailable');
+    const checksums = data.release.assets.find(item => item.name === 'SHA256SUMS');
+    if (!asset || !checksums) throw new Error('platform build or checksums unavailable');
     const assetUrl = new URL(asset.browser_download_url);
+    const checksumUrl = new URL(checksums.browser_download_url);
     const releaseUrl = new URL(data.release.html_url);
-    if (assetUrl.origin !== 'https://github.com' || releaseUrl.origin !== 'https://github.com') throw new Error('unexpected release origin');
+    if (assetUrl.origin !== 'https://github.com' || checksumUrl.origin !== 'https://github.com' || releaseUrl.origin !== 'https://github.com') throw new Error('unexpected release origin');
     const download = document.createElement('a');
     download.className = 'primary';
     download.href = assetUrl.href;
@@ -46,14 +48,21 @@ export async function loadDownload() {
     downloadExternal.className = 'sr-only';
     downloadExternal.textContent = '(external)';
     download.append(downloadExternal);
-    const allDownloads = document.createElement('a');
-    allDownloads.href = releaseUrl.href;
-    allDownloads.append('All downloads and checksums ');
+    const checksum = document.createElement('a');
+    checksum.href = checksumUrl.href;
+    checksum.append('View SHA-256 checksums ');
     const external = document.createElement('span');
     external.className = 'sr-only';
     external.textContent = '(external)';
-    allDownloads.append(external);
-    target.replaceChildren(download, allDownloads);
+    checksum.append(external);
+    const allDownloads = document.createElement('a');
+    allDownloads.href = releaseUrl.href;
+    allDownloads.append('See all release files ');
+    const allExternal = document.createElement('span');
+    allExternal.className = 'sr-only';
+    allExternal.textContent = '(external)';
+    allDownloads.append(allExternal);
+    target.replaceChildren(download, checksum, allDownloads);
   } catch {
     const message = document.createElement('p');
     message.textContent = 'Downloads are being published.';

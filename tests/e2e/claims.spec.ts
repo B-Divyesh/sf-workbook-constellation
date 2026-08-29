@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import * as XLSX from 'xlsx';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 function contrast(first: string, second: string) {
   const luminance = (color: string) => {
@@ -40,31 +40,53 @@ test('@claim:sample-map loads a useful eight-sheet dependency map', async ({ pag
   await page.goto('/demo');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Northstar-2026-plan.xlsx');
   await expect(page.locator('.node')).toHaveCount(8);
-  await expect(page.getByText('8 sheets · 7 formulas · 9 cross-sheet paths')).toBeVisible();
+  await expect(page.getByText('8 sheets · 7 formulas · 9 paths between sheets')).toBeVisible();
   await expect(page.getByText('2 warnings found')).toBeVisible();
   await expect(page.locator('.warning-kind')).toHaveText(['external', 'opaque']);
+});
+
+test('@claim:path-evidence shows the exact cells and formula for a selected path', async ({ page }) => {
+  await page.goto('/?demo=1');
   await page.getByRole('button', { name: /Forecast to Dashboard/ }).click();
-  await expect(page.getByLabel('Path evidence').locator('code').filter({ hasText: /^Forecast!F12$/ })).toBeVisible();
+  const evidence = page.getByLabel('Path evidence');
+  await expect(evidence.locator('code')).toHaveText(['Forecast!F12', 'Dashboard!C7']);
+  await expect(evidence.locator('pre')).toHaveText('=Forecast!F12');
 });
 
 test('@claim:no-account opens the complete sample without sign-in or setup', async ({ page }) => {
-  await page.goto('/demo');
+  await page.addInitScript(() => localStorage.setItem('real:sentinel', 'unchanged'));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with sample data' }).click();
+  await expect(page).toHaveURL(/\?demo=1$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
   await expect(page.locator('input[type="email"], input[type="password"]')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: /Trace dependencies/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Trace formula paths/ })).toBeVisible();
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => /account|auth|session/i.test(key)))).toEqual([]);
+  await page.locator('[data-sheet="Checks"]').click();
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.locator('[data-sheet="Checks"]')).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('heading', { name: 'Open a workbook in read-only mode' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('real:sentinel'))).toBe('unchanged');
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('demo:')))).toEqual([]);
 });
 
-test('@claim:html-export exports a self-contained handoff report', async ({ page }) => {
+test('@claim:html-export exports an HTML report that opens without the app', async ({ page, context }) => {
   await page.goto('/demo');
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export handoff report' }).click();
+  await page.getByRole('button', { name: 'Export HTML report' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('Northstar-2026-plan-handoff.html');
   const stream = await download.createReadStream();
   let text = '';
   for await (const chunk of stream!) text += chunk.toString();
-  expect(text).toContain('Workbook dependency handoff');
+  expect(text).toContain('Workbook formula report');
   expect(text).toContain('Forecast!F12');
+  expect(text).not.toMatch(/<(?:script|link|img)[^>]+(?:src|href)=/i);
+  await context.setOffline(true);
+  await page.setContent(text);
+  await expect(page.getByRole('heading', { name: 'Workbook formula report' })).toBeVisible();
 });
 
 for (const { formula, ref } of [
@@ -79,7 +101,7 @@ for (const { formula, ref } of [
       mimeType: 'application/vnd.ms-excel.sheet.macroEnabled.12',
       buffer: referenceWorkbook(formula)
     });
-    await expect(page.getByText('2 sheets · 1 formulas · 1 cross-sheet paths')).toBeVisible();
+    await expect(page.getByText('2 sheets · 1 formulas · 1 paths between sheets')).toBeVisible();
     await expect(page.locator('.node strong')).toHaveText(['Inputs', 'Output']);
     const path = page.getByRole('button', { name: /Inputs to Output/ });
     await expect(path).toBeVisible();
@@ -88,7 +110,7 @@ for (const { formula, ref } of [
     await expect(page.locator('.formula-table code').filter({ hasText: `=${formula}` })).toBeVisible();
 
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export handoff report' }).click();
+    await page.getByRole('button', { name: 'Export HTML report' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('arithmetic-handoff.html');
     const stream = await download.createReadStream();
@@ -116,7 +138,7 @@ test('strips XLSM from HTML and JSON export base names', async ({ page }) => {
     buffer: referenceWorkbook('Inputs!A1')
   });
   for (const { button, filename } of [
-    { button: 'Export handoff report', filename: 'macro-model-handoff.html' },
+    { button: 'Export HTML report', filename: 'macro-model-handoff.html' },
     { button: 'Export JSON evidence', filename: 'macro-model-evidence.json' }
   ]) {
     const downloadPromise = page.waitForEvent('download');
@@ -142,7 +164,7 @@ test('@claim:local-only sends no workbook or demo data off origin', async ({ pag
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: workbook(2, 'Sheet1!A1+1337')
   });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in private.xlsx' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in private.xlsx' })).toBeVisible();
   expect(external).toEqual(['https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/latest']);
   expect(requestBodies.join('\n')).not.toContain('1337');
 });
@@ -151,10 +173,10 @@ test('@claim:input-boundaries accepts XLSX and XLSM and rejects unsupported, ove
   await page.goto('/');
   const valid = workbook(2);
   await page.setInputFiles('#file', { name: 'valid.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: valid });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in valid.xlsx' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in valid.xlsx' })).toBeVisible();
   await page.getByRole('button', { name: 'Open another file' }).click();
   await page.setInputFiles('#file', { name: 'valid.xlsm', mimeType: 'application/vnd.ms-excel.sheet.macroEnabled.12', buffer: valid });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in valid.xlsm' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in valid.xlsm' })).toBeVisible();
   await page.getByRole('button', { name: 'Open another file' }).click();
   await page.setInputFiles('#file', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('no') });
   await expect(page.getByRole('status').first()).toContainText('not an XLSX or XLSM');
@@ -163,7 +185,17 @@ test('@claim:input-boundaries accepts XLSX and XLSM and rejects unsupported, ove
   await page.setInputFiles('#file', largePath);
   await expect(page.getByRole('status').first()).toContainText('larger than 50 MB');
   await page.setInputFiles('#file', { name: 'damaged.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('not a workbook') });
-  await expect(page.getByRole('status').first()).toContainText('encrypted, damaged, or use an unsupported format');
+  await expect(page.getByRole('status').first()).toContainText('damaged or use an unsupported format');
+});
+
+test('@claim:encrypted-input identifies encrypted workbook containers and gives a recovery action', async ({ page }) => {
+  await page.goto('/');
+  await page.setInputFiles('#file', {
+    name: 'protected.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: readFileSync(new URL('../fixtures/encrypted-workbook.xlsx', import.meta.url))
+  });
+  await expect(page.getByRole('status').first()).toHaveText('This workbook is encrypted. Save an unencrypted copy and try again.');
 });
 
 test('@claim:free-sheet-limit keeps eight sheets free and a valid license removes that cap', async ({ page }) => {
@@ -171,25 +203,37 @@ test('@claim:free-sheet-limit keeps eight sheets free and a valid license remove
   const nineSheets = workbook(9);
   await page.goto('/');
   await page.setInputFiles('#file', { name: 'eight-sheets.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: eightSheets });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in eight-sheets.xlsx' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in eight-sheets.xlsx' })).toBeVisible();
   await page.getByRole('button', { name: 'Open another file' }).click();
   await page.setInputFiles('#file', { name: 'nine-sheets.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: nineSheets });
   await expect(page.getByRole('status').first()).toContainText('license is needed above 8 sheets');
   await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
   await page.reload();
   await page.setInputFiles('#file', { name: 'nine-sheets.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: nineSheets });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in nine-sheets.xlsx' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in nine-sheets.xlsx' })).toBeVisible();
 });
 
-test('@claim:license-terms states and applies the $19 one-time Plus terms', async ({ page }) => {
+test('@claim:license-terms applies the complete Plus entitlement while keeping HTML export free', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Audit larger workbooks for $19 once' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Buy a $19 license (external)' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/workbook-constellation/checkout');
-  await expect(page.getByText('HTML handoff reports stay free.')).toBeVisible();
+  await expect(page.getByText('HTML reports stay free.')).toBeVisible();
   await page.goto('/terms');
   await expect(page.getByText('Constellation Plus costs $19 as a one-time purchase.')).toBeVisible();
   await expect(page.getByText('Sociobot and Dodo act as merchant of record.')).toBeVisible();
   await expect(page.getByText('Refunds revoke the related license.')).toBeVisible();
+  await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
+  await page.goto('/');
+  await page.setInputFiles('#file', { name: 'licensed-nine.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: workbook(9) });
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in licensed-nine.xlsx' })).toBeVisible();
+  const jsonPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON evidence' }).click();
+  expect((await jsonPromise).suggestedFilename()).toBe('licensed-nine-evidence.json');
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/?demo=1');
+  const htmlPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export HTML report' }).click();
+  expect((await htmlPromise).suggestedFilename()).toBe('Northstar-2026-plan-handoff.html');
 });
 
 test('@claim:refund-revocation removes paid features after a revoked verification', async ({ page }) => {
@@ -205,7 +249,7 @@ test('@claim:refund-revocation removes paid features after a revoked verificatio
   await page.goto('/demo');
   await expect(page.getByRole('status').filter({ hasText: 'license is no longer active' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export JSON evidence' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Export handoff report' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export HTML report' })).toBeVisible();
   expect(verificationUrl).toContain('license=refunded-token');
   expect(verificationUrl).not.toContain('Northstar');
 });
@@ -222,7 +266,7 @@ test('@claim:escaped-evidence renders workbook-controlled text literally in the 
   const bytes = Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }));
   await page.goto('/');
   await page.setInputFiles('#file', { name: 'audit<img src=x>.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: bytes });
-  await expect(page.getByRole('heading', { name: 'Trace dependencies in audit<img src=x>.xlsx' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in audit<img src=x>.xlsx' })).toBeVisible();
   await expect(page.locator('main img')).toHaveCount(0);
   await expect(page.locator('.node strong').filter({ hasText: 'Input<img src=x>' })).toBeVisible();
   await expect(page.locator('.formula-table code').filter({ hasText: `=${formula}` })).toBeVisible();
@@ -230,7 +274,7 @@ test('@claim:escaped-evidence renders workbook-controlled text literally in the 
   await page.getByRole('button', { name: /Input<img src=x> to Output/ }).click();
   await expect(page.locator('#proof-details pre')).toHaveText(`=${formula}`);
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export handoff report' }).click();
+  await page.getByRole('button', { name: 'Export HTML report' }).click();
   const stream = await (await downloadPromise).createReadStream();
   let report = '';
   for await (const chunk of stream!) report += chunk.toString();
@@ -238,13 +282,51 @@ test('@claim:escaped-evidence renders workbook-controlled text literally in the 
   expect(report).not.toContain('<img src=x>');
 });
 
-test('@claim:runtime-privacy uses only documented runtime services', async ({ page }) => {
-  const requests: string[] = [];
-  page.on('request', request => requests.push(new URL(request.url()).origin));
+test('@claim:runtime-privacy uses only documented services in web and desktop flows', async ({ browser }) => {
+  const webContext = await browser.newContext();
+  const webPage = await webContext.newPage();
+  const webRequests: string[] = [];
+  webPage.on('request', request => webRequests.push(request.url()));
+  await webPage.route('https://api.github.com/**', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }));
+  await webPage.route('https://api.sociobot.in/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"valid":false}' }));
+  await webPage.goto('/');
+  await webPage.getByLabel('Have a license?').fill('privacy-test-token');
+  await webPage.getByRole('button', { name: 'Verify license' }).click();
+  await expect(webPage.getByRole('status').last()).toContainText('not active');
+  expect(new Set(webRequests.map(url => new URL(url).origin))).toEqual(new Set(['http://127.0.0.1:4173', 'https://api.github.com', 'https://api.sociobot.in']));
+  expect(webRequests.find(url => url.includes('/verify?'))).not.toContain('Northstar');
+  await expect(webPage.locator('script[src^="http"], link[rel="stylesheet"][href^="http"]')).toHaveCount(0);
+  await webContext.close();
+
+  const desktopContext = await browser.newContext();
+  await desktopContext.addInitScript(() => Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {} }));
+  const desktopPage = await desktopContext.newPage();
+  const desktopRequests: string[] = [];
+  desktopPage.on('request', request => desktopRequests.push(request.url()));
+  await desktopPage.goto('/?demo=1');
+  await desktopPage.locator('[data-sheet="Checks"]').click();
+  expect(new Set(desktopRequests.map(url => new URL(url).origin))).toEqual(new Set(['http://127.0.0.1:4173']));
+  await expect(desktopPage.locator('script[src^="http"], link[rel="stylesheet"][href^="http"]')).toHaveCount(0);
+  await desktopContext.close();
+});
+
+test('@claim:desktop-local-parsing parses an XLSM in a desktop-webview context without sending workbook data', async ({ browser }) => {
+  const context = await browser.newContext();
+  await context.addInitScript(() => Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {} }));
+  const page = await context.newPage();
+  const requests: Array<{ url: string; body: string }> = [];
+  page.on('request', request => requests.push({ url: request.url(), body: request.postData() || '' }));
   await page.route('https://api.github.com/**', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }));
   await page.goto('/');
-  expect(new Set(requests)).toEqual(new Set(['http://127.0.0.1:4173', 'https://api.github.com']));
-  await expect(page.locator('script[src^="http"], link[rel="stylesheet"][href^="http"]')).toHaveCount(0);
+  await page.setInputFiles('#file', {
+    name: 'desktop-private.xlsm',
+    mimeType: 'application/vnd.ms-excel.sheet.macroEnabled.12',
+    buffer: workbook(2, 'Sheet1!A1+8246')
+  });
+  await expect(page.getByRole('heading', { name: 'Trace formula paths in desktop-private.xlsm' })).toBeVisible();
+  expect(requests.filter(request => request.url.includes('api.github.com'))).toHaveLength(1);
+  expect(requests.map(request => request.body).join('\n')).not.toContain('8246');
+  await context.close();
 });
 
 test('@claim:offline-reload reopens the demo after the first visit', async ({ page, context }) => {
@@ -260,16 +342,16 @@ test('@claim:offline-reload reopens the demo after the first visit', async ({ pa
 test('announces and focuses each SPA destination on forward and browser-history navigation', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Try it with sample data' }).click();
-  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace dependencies in Northstar-2026-plan\.xlsx/ });
+  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace formula paths in Northstar-2026-plan\.xlsx/ });
   await expect(demoHeading).toBeFocused();
-  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+  await expect(page.locator('#route-status')).toHaveText('Trace formula paths in Northstar-2026-plan.xlsx');
   await page.goBack();
   const homeHeading = page.getByRole('heading', { level: 1, name: 'Map workbook formulas before you edit' });
   await expect(homeHeading).toBeFocused();
   await expect(page.locator('#route-status')).toHaveText('Map workbook formulas before you edit');
   await page.goForward();
   await expect(demoHeading).toBeFocused();
-  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+  await expect(page.locator('#route-status')).toHaveText('Trace formula paths in Northstar-2026-plan.xlsx');
 });
 
 test('has no serious accessibility findings on landing and demo', async ({ page }) => {

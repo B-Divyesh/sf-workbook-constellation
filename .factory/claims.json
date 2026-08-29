@@ -1,10 +1,17 @@
 [
   {
     "id": "sample-map",
-    "claim": "The bundled sample shows eight sheets, seven formulas, nine cross-sheet paths, and external and opaque warnings.",
+    "claim": "The bundled sample shows eight sheets, seven formulas, nine paths between sheets, and external and untraceable-formula warnings.",
     "where": "demo and README",
     "test": "npm run test:e2e -- --grep @claim:sample-map",
     "sandbox": "fresh browser context at /demo; inspect the map, evidence, counts, and warning types"
+  },
+  {
+    "id": "path-evidence",
+    "claim": "Selecting a path shows the exact source cell, destination cell, and saved formula behind it.",
+    "where": "landing preview, sample map, and README",
+    "test": "npm run test:e2e -- --grep @claim:path-evidence",
+    "sandbox": "fresh browser context at /?demo=1; select Forecast to Dashboard and assert both cells and the exact formula"
   },
   {
     "id": "no-account",
@@ -15,10 +22,10 @@
   },
   {
     "id": "html-export",
-    "claim": "Exports a static HTML handoff report.",
+    "claim": "Exports an HTML report that opens without Workbook Constellation or a network connection.",
     "where": "How it works, audit toolbar, and README",
     "test": "npm run test:e2e -- --grep @claim:html-export",
-    "sandbox": "sample data; assert the downloaded report name and evidence contents"
+    "sandbox": "sample data; inspect the download for external resources, go offline, open it, and assert the report heading and evidence"
   },
   {
     "id": "local-only",
@@ -29,10 +36,17 @@
   },
   {
     "id": "runtime-privacy",
-    "claim": "The app includes no analytics, third-party scripts, or remote fonts; only GitHub release metadata and explicit Sociobot license actions may use external services.",
+    "claim": "The web and desktop app include no analytics, third-party scripts, or remote fonts; only GitHub release checks and explicit Sociobot license actions contact external services.",
     "where": "privacy page and README",
     "test": "npm run test:e2e -- --grep @claim:runtime-privacy",
-    "sandbox": "fresh landing context with GitHub mocked; record all requests and inspect external script and stylesheet elements"
+    "sandbox": "fresh web and simulated Tauri contexts; exercise GitHub lookup, license verification, and workbook interaction while recording every request"
+  },
+  {
+    "id": "desktop-local-parsing",
+    "claim": "Workbook parsing runs inside the browser or desktop webview without sending workbook contents.",
+    "where": "privacy page and README",
+    "test": "npm run test:e2e -- --grep @claim:desktop-local-parsing",
+    "sandbox": "simulated Tauri webview context; import a real XLSM formula fixture and assert its unique content appears in no request body"
   },
   {
     "id": "json-export",
@@ -43,10 +57,17 @@
   },
   {
     "id": "license-terms",
-    "claim": "Constellation Plus costs $19 once, keeps HTML reports free, accepts workbooks above eight sheets, and uses Sociobot and Dodo as merchant of record.",
+    "claim": "Constellation Plus costs $19 once, keeps HTML reports free, accepts workbooks above eight sheets, and adds JSON evidence export.",
     "where": "landing paid tier, terms, and README",
     "test": "npm run test:e2e -- --grep @claim:license-terms",
-    "sandbox": "fresh landing context; assert price, free HTML term, and the exact Sociobot checkout URL"
+    "sandbox": "fresh browser contexts; assert terms and checkout URL, then exercise nine-sheet import and both licensed JSON and free HTML exports"
+  },
+  {
+    "id": "checkout-handoff",
+    "claim": "The $19 purchase link hands payment to the hosted Dodo checkout through Sociobot.",
+    "where": "paid tier, terms, and README",
+    "test": "npm run test:live -- --grep @claim:checkout-handoff",
+    "sandbox": "request the public Sociobot checkout without following redirects; assert the Dodo session location, then read the hosted page price"
   },
   {
     "id": "refund-revocation",
@@ -70,6 +91,13 @@
     "sandbox": "fresh browser context; upload generated XLSX/XLSM plus wrong-extension, 50 MB + 1 byte, and malformed fixtures"
   },
   {
+    "id": "encrypted-input",
+    "claim": "Encrypted workbook containers are rejected with a specific recovery action.",
+    "where": "workbook limits and README",
+    "test": "npm run test:e2e -- --grep @claim:encrypted-input",
+    "sandbox": "fresh browser context; upload a password-encrypted XLSX fixture and assert the unencrypted-copy recovery message"
+  },
+  {
     "id": "offline-reload",
     "claim": "The demo works offline after the first visit.",
     "where": "README",
@@ -81,7 +109,7 @@
     "claim": "The parser reports formulas without calculating cells, editing workbooks, running macros, or opening external files.",
     "where": "workspace, limits, privacy, terms, and README",
     "test": "npm run test:unit -- --testNamePattern @claim:read-only-boundaries",
-    "sandbox": "generated workbook fixture containing a formula and macro-like payload; inspect the structural output"
+    "sandbox": "generated macro-bearing XLSM containing a VBA project and formula; verify the macro bytes are present but absent from structural output and no network call occurs"
   },
   {
     "id": "formula-syntax",
@@ -98,6 +126,13 @@
     "sandbox": "generated formula records containing an external marker, OFFSET, and a two-sheet cycle"
   },
   {
+    "id": "addin-formulas",
+    "claim": "Add-in formulas are flagged when the app cannot fully trace them.",
+    "where": "workbook limits and README",
+    "test": "npm run test:unit -- --testNamePattern @claim:addin-formulas",
+    "sandbox": "parse an _xll add-in formula containing a normal sheet reference; assert the reference is kept and the formula is flagged as untraceable"
+  },
+  {
     "id": "escaped-evidence",
     "claim": "Reports display workbook-controlled text literally instead of interpreting it as page markup.",
     "where": "README privacy and security",
@@ -109,20 +144,27 @@
     "claim": "The landing page links the detected platform installer and published checksums from GitHub release metadata.",
     "where": "desktop download section and README",
     "test": "npm run test:e2e -- --grep @claim:desktop-download",
-    "sandbox": "fresh landing context with recorded GitHub API metadata fixture; assert platform asset and checksum-page links"
+    "sandbox": "fresh landing context with recorded GitHub API metadata containing a platform asset and SHA256SUMS; assert direct links to both"
   },
   {
     "id": "release-workflow",
     "claim": "A version tag builds unsigned Linux, Windows, Intel macOS, and Apple silicon macOS installers, then publishes SHA-256 checksums and a latest-release manifest.",
     "where": "desktop download section and README",
     "test": "npm run test:unit -- --testNamePattern @claim:release-workflow",
-    "sandbox": "inspect the shipped GitHub Actions workflow for all four jobs and both generated release metadata files"
+    "sandbox": "inspect the shipped workflow and recorded completed v0.1.4 release run; assert success, matching commit, four platform targets, SHA256SUMS, and latest.json"
   },
   {
     "id": "installer-safety",
     "claim": "The shell and PowerShell helpers verify SHA-256 before keeping an installer.",
     "where": "desktop download section and README",
     "test": "npm run test:unit -- --testNamePattern @claim:installer-safety",
-    "sandbox": "inspect shipped helper scripts for checksum retrieval, comparison, and failure cleanup"
+    "sandbox": "execute the shell helper against matching and mismatching checksums; execute the PowerShell pair on the Windows release runner; assert bad files are removed before launch"
+  },
+  {
+    "id": "linux-launch",
+    "claim": "On Linux, the shell helper makes a verified AppImage executable and launches it.",
+    "where": "README installer instructions",
+    "test": "npm run test:unit -- --testNamePattern @claim:linux-launch",
+    "sandbox": "temporary directory with mocked release responses and checksum command; assert executable mode, launch marker, and completion message"
   }
 ]

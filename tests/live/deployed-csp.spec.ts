@@ -94,9 +94,9 @@ test('deployed SPA announces destinations and matches this production build', as
   expect(await deployedWorker.text()).toBe(expectedWorker.toString());
 
   await page.getByRole('button', { name: 'Try it with sample data' }).click();
-  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace dependencies in Northstar-2026-plan\.xlsx/ });
+  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace formula paths in Northstar-2026-plan\.xlsx/ });
   await expect(demoHeading).toBeFocused();
-  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+  await expect(page.locator('#route-status')).toHaveText('Trace formula paths in Northstar-2026-plan.xlsx');
   await page.goBack();
   await expect(page.getByRole('heading', { level: 1, name: 'Map workbook formulas before you edit' })).toBeFocused();
   await expect(page.locator('#route-status')).toHaveText('Map workbook formulas before you edit');

@@ -10,7 +10,8 @@ describe('claim manifest', () => {
       new URL('./parser.test.ts', import.meta.url),
       new URL('./hosting.test.ts', import.meta.url),
       new URL('./e2e/claims.spec.ts', import.meta.url),
-      new URL('./e2e/release.spec.ts', import.meta.url)
+      new URL('./e2e/release.spec.ts', import.meta.url),
+      new URL('./live/checkout.spec.ts', import.meta.url)
     ].map(path => readFileSync(path, 'utf8')).join('\n');
     expect(new Set(claims.map(claim => claim.id)).size).toBe(claims.length);
     for (const claim of claims) {

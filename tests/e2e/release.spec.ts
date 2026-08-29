@@ -16,6 +16,9 @@ test('@claim:desktop-download uses CORS-safe GitHub metadata to link the detecte
       assets: [{
         name: 'Workbook.Constellation_0.1.1_amd64.AppImage',
         browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.1/Workbook.Constellation_0.1.1_amd64.AppImage'
+      }, {
+        name: 'SHA256SUMS',
+        browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.1/SHA256SUMS'
       }]
     })
   }));
@@ -24,7 +27,8 @@ test('@claim:desktop-download uses CORS-safe GitHub metadata to link the detecte
 
   const download = page.getByRole('link', { name: 'Download for Linux (external)' });
   await expect(download).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.1\/.+\.AppImage$/);
-  await expect(page.getByRole('link', { name: /All downloads and checksums/ })).toHaveAttribute('href', /github\.com\/.+\/releases\/tag\/v0\.1\.1$/);
+  await expect(page.getByRole('link', { name: /View SHA-256 checksums/ })).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.1\/SHA256SUMS$/);
+  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /github\.com\/.+\/releases\/tag\/v0\.1\.1$/);
 });
 
 test('shows a calm release-page fallback when no release exists', async ({ page }) => {
@@ -52,7 +56,8 @@ test('selects Intel and Apple silicon macOS disk images independently', async ({
     html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.4',
     assets: [
       { name: 'Workbook.Constellation_0.1.4_aarch64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_aarch64.dmg' },
-      { name: 'Workbook.Constellation_0.1.4_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_x64.dmg' }
+      { name: 'Workbook.Constellation_0.1.4_x64.dmg', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/Workbook.Constellation_0.1.4_x64.dmg' },
+      { name: 'SHA256SUMS', browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.4/SHA256SUMS' }
     ]
   };
   const intel = await browser.newContext({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' });
@@ -69,6 +74,40 @@ test('selects Intel and Apple silicon macOS disk images independently', async ({
   await armPage.goto('/');
   await expect(armPage.getByRole('link', { name: 'Download for macOS (Apple silicon) (external)' })).toHaveAttribute('href', /_aarch64\.dmg$/);
   await arm.close();
+});
+
+test('updates route titles, descriptions, canonical URLs, and social metadata', async ({ page }) => {
+  const expected = [
+    { path: '/', title: 'Workbook Constellation — Map workbook formulas', canonical: '/' },
+    { path: '/?demo=1', title: 'Demo — Workbook Constellation', canonical: '/demo' },
+    { path: '/demo', title: 'Demo — Workbook Constellation', canonical: '/demo' },
+    { path: '/privacy', title: 'Privacy — Workbook Constellation', canonical: '/privacy' },
+    { path: '/terms', title: 'Terms — Workbook Constellation', canonical: '/terms' }
+  ];
+  for (const route of expected) {
+    await page.goto(route.path);
+    await expect(page).toHaveTitle(route.title);
+    const description = await page.locator('meta[name="description"]').getAttribute('content');
+    expect(description?.length).toBeGreaterThan(20);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://workbook-constellation.sociobot.in${route.canonical}`);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', route.title);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description!);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', `https://workbook-constellation.sociobot.in${route.canonical}`);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', route.title);
+    await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', description!);
+  }
+});
+
+test('fits the headline, audience, action, and all three facts in the 390 by 844 first screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const elements = [page.locator('.hero h1'), page.locator('.hero .lede'), page.getByRole('button', { name: 'Try it with sample data' }), ...await page.locator('.facts li').all()];
+  for (const element of elements) {
+    const box = await element.boundingBox();
+    expect(box, 'first-screen element has layout').not.toBeNull();
+    expect(box!.y + box!.height, await element.textContent() || 'first-screen element').toBeLessThanOrEqual(844);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('an installed service worker receives a later deployment shell when only HTML changes', async ({ browser }) => {

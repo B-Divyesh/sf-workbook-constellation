@@ -32,6 +32,12 @@ describe('formula parser', () => {
     expect(parseFormula('INDIRECT(A1&"!B2")', 'Summary').warnings).toContain('opaque');
   });
 
+  it('@claim:addin-formulas flags add-in formulas the app cannot trace', () => {
+    const parsed = parseFormula('_xll.CustomForecast(Input!A1)', 'Summary');
+    expect(parsed.warnings).toContain('opaque');
+    expect(parsed.precedents).toContainEqual({ sheet: 'Input', ref: 'A1', external: undefined });
+  });
+
   it('@claim:formula-syntax parses supported A1 references', () => {
     expect(parseFormula("SUM('Sales plan'!$B$2:$B$9)+Inputs!C4", 'Summary').precedents).toEqual([
       { sheet: 'Sales plan', ref: '$B$2:$B$9', external: undefined },
@@ -81,12 +87,15 @@ describe('formula parser', () => {
   it('@claim:read-only-boundaries reports formulas without evaluating macro content', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const book = XLSX.utils.book_new();
-    const sheet = XLSX.utils.aoa_to_sheet([[''], ['macro-like text: Shell("bad")']]);
+    const sheet = XLSX.utils.aoa_to_sheet([[''], ['ordinary workbook text']]);
     sheet.A1 = { t: 'n', f: 'Input!A1' };
     XLSX.utils.book_append_sheet(book, sheet, 'Summary');
     XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[42]]), 'Input');
-    const bytes = XLSX.write(book, { type: 'array', bookType: 'xlsx' });
-    const result = auditWorkbook(bytes, 'safe.xlsx');
+    (book as XLSX.WorkBook & { vbaraw?: Uint8Array }).vbaraw = new TextEncoder().encode('Attribute VB_Name = "Module1"\nSub Auto_Open()\nShell("bad")\nEnd Sub');
+    const bytes = XLSX.write(book, { type: 'array', bookType: 'xlsm', bookVBA: true });
+    const reopened = XLSX.read(bytes, { type: 'array', bookVBA: true }) as XLSX.WorkBook & { vbaraw?: Uint8Array };
+    expect(reopened.vbaraw?.byteLength).toBeGreaterThan(0);
+    const result = auditWorkbook(bytes, 'safe.xlsm');
     expect(result.formulas[0].formula).toBe('=Input!A1');
     expect(result).not.toHaveProperty('calculatedValues');
     expect(JSON.stringify(result)).not.toContain('Shell("bad")');

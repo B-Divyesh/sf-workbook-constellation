@@ -5,7 +5,7 @@ import type { Audit, FormulaRecord, SheetEdge, WarningKind } from './types';
 // the unquoted alternative token-shaped so operators such as the minus in
 // `1-Inputs!A1` cannot be absorbed into a workbook reference.
 const cellRef = /(?:(?:'((?:[^']|'')+)'|((?:\[[^\]\r\n]+\])?[\p{L}_][\p{L}\p{N}_.]*))!)?(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/gu;
-const opaqueFunctions = /\b(?:INDIRECT|OFFSET|WEBSERVICE|CUBE(?:VALUE|MEMBER)|RTD)\s*\(/i;
+const opaqueFunctions = /(?:\b(?:INDIRECT|OFFSET|WEBSERVICE|CUBE(?:VALUE|MEMBER)|RTD)\s*\(|(?:_xll\.|_xludf\.)[\p{L}_][\p{L}\p{N}_.]*\s*\()/iu;
 const externalBook = /\[([^\]]+)\]/;
 
 // Excel escapes a quote inside a string by doubling it. Keep every character
@@ -54,6 +54,8 @@ export function parseFormula(formula: string, currentSheet: string) {
 
 export function auditWorkbook(buffer: ArrayBuffer, fileName: string): Audit {
   const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 4));
+  const compoundFileSignature = signature.length === 4 && signature[0] === 0xd0 && signature[1] === 0xcf && signature[2] === 0x11 && signature[3] === 0xe0;
+  if (compoundFileSignature) throw new Error('Encrypted workbooks are not supported');
   const zipSignature = signature.length === 4 && signature[0] === 0x50 && signature[1] === 0x4b && (
     (signature[2] === 0x03 && signature[3] === 0x04) ||
     (signature[2] === 0x05 && signature[3] === 0x06) ||
