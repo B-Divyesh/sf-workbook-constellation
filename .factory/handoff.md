@@ -5,9 +5,9 @@
 This repair addresses every release-blocking finding from independent reports
 `.factory/verification.md` and `.factory/verification-2.md` for candidate
 `5e26f1cda928ec293f2b209f760e9f8c756f27ad`. The core repair is commit
-`6f5260bb754d95a8fc0ffb06bec8d84baaa5a95a` (short `6f5260b`); the final
-integration adds claim-manifest enforcement, route focus announcements, and a
-390px all-control touch-target regression.
+`6f5260bb754d95a8fc0ffb06bec8d84baaa5a95a` (short `6f5260b`). Final code and
+test integration commit `7b3e9e3e50caecbee6461d4a14535861f0a038aa` adds claim-manifest enforcement,
+route focus announcements, and a 390px all-control touch-target regression.
 
 The static deployment remains at
 <https://workbook-constellation.sociobot.in>. Azure deployment
