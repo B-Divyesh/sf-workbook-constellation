@@ -1,16 +1,28 @@
-# Workbook Constellation — polish round 1 handoff
+# Workbook Constellation — independent verification 7 handoff
 
 ## Status
 
-**PASS.** All F-1-1 through F-1-23 in `.factory/review-1.md` are resolved and mapped in `.factory/polish-1.md`. No earlier review or polish report exists. There are no known product gaps or deferred findings.
+**FAIL — do not release `f0e70dd4ae7907c8222307b1363dd76577b8e1b0`.**
+
+Fresh live verification found a high-severity correctness defect: standard
+scientific-notation formula `=1E3` is interpreted as a reference to `E3`.
+In an otherwise non-circular sheet containing `A1 = 1E3` and `E3 = A1`, the
+product reports two false circular-reference warnings. `=LOG10(100)` likewise
+shows invented source `Output!LOG10`. This makes the structural evidence
+unreliable for ordinary workbook formulas. Full evidence and the repair
+requirement are in `.factory/verification-7.md`.
 
 Production: <https://workbook-constellation.sociobot.in>
+
+The builder-reported material below is historical evidence only and is
+superseded by the independent **FAIL** decision above and
+`.factory/verification-7.md`.
 
 Desktop release: [v0.1.8](https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.8)
 
 Release workflow: [run 33267316670](https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33267316670), completed successfully on 2026-08-29.
 
-## What changed
+## Historical builder-reported implementation
 
 - Rewrote first-screen and README language in plain words while retaining the paper-archive visual system.
 - Made “Try it with sample data” open the isolated `?demo=1` sandbox in one click, with a persistent banner, reset, exit, and no demo persistence.
@@ -20,7 +32,7 @@ Release workflow: [run 33267316670](https://github.com/B-Divyesh/sf-workbook-con
 - Fixed 390 × 844 first-screen layout and verified touch targets, keyboard paths, both viewport sizes, reduced motion, and serious/critical Axe results.
 - Hardened downloads: current v0.1.8 platform links and checksums render without a cold network request. GitHub is contacted only when the visitor asks for a newer release, so API rate limits cannot produce cold-load console errors.
 
-## Exact verification
+## Historical builder-reported verification
 
 ### Fresh clone
 
