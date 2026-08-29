@@ -1,0 +1,19 @@
+{
+  "tag_name": "v0.1.11",
+  "target_commitish": "97be5bbe87ef7702b26a834bae6afb8c6db8afb0",
+  "published_at": "2026-08-29T23:47:47Z",
+  "html_url": "https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.11",
+  "assets": [
+    "latest.json",
+    "SHA256SUMS",
+    "Workbook.Constellation-0.1.11-1.x86_64.rpm",
+    "Workbook.Constellation_0.1.11_aarch64.dmg",
+    "Workbook.Constellation_0.1.11_amd64.AppImage",
+    "Workbook.Constellation_0.1.11_amd64.deb",
+    "Workbook.Constellation_0.1.11_x64-setup.exe",
+    "Workbook.Constellation_0.1.11_x64.dmg",
+    "Workbook.Constellation_0.1.11_x64_en-US.msi",
+    "Workbook.Constellation_aarch64.app.tar.gz",
+    "Workbook.Constellation_x64.app.tar.gz"
+  ]
+}

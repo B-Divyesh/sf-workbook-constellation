@@ -137,8 +137,8 @@ describe('static deployment policy', () => {
     const packageLock = JSON.parse(readFileSync(new URL('package-lock.json', root), 'utf8')) as { version: string; packages: Record<string, { version: string }> };
     const tauri = JSON.parse(readFileSync(new URL('src-tauri/tauri.conf.json', root), 'utf8')) as { version: string };
     const cargoVersion = readFileSync(new URL('src-tauri/Cargo.toml', root), 'utf8').match(/^version\s*=\s*"([^"]+)"/m)?.[1];
-    const release = JSON.parse(readFileSync(new URL('tests/fixtures/release-v0.1.8.json', root), 'utf8')) as { target_commitish: string; assets: string[] };
-    const run = JSON.parse(readFileSync(new URL('tests/fixtures/release-run-v0.1.8.json', root), 'utf8')) as { head_sha: string; status: string; conclusion: string; event: string; jobs: Array<{ name: string; conclusion: string; verified_step?: string }> };
+    const release = JSON.parse(readFileSync(new URL('tests/fixtures/release-v0.1.11.json', root), 'utf8')) as { tag_name: string; target_commitish: string; assets: string[] };
+    const run = JSON.parse(readFileSync(new URL('tests/fixtures/release-run-v0.1.11.json', root), 'utf8')) as { head_sha: string; head_branch: string; status: string; conclusion: string; event: string; jobs: Array<{ name: string; conclusion: string; verified_step?: string }> };
     expect(workflow).toContain("tags: ['v*']");
     expect(workflow).toContain('ubuntu-22.04');
     expect(workflow).toContain('windows-latest');
@@ -153,6 +153,8 @@ describe('static deployment policy', () => {
     expect([packageLock.version, packageLock.packages[''].version, tauri.version, cargoVersion]).toEqual([
       packageJson.version, packageJson.version, packageJson.version, packageJson.version
     ]);
+    expect(release.tag_name).toBe(`v${packageJson.version}`);
+    expect(run.head_branch).toBe(release.tag_name);
     expect(run).toMatchObject({ head_sha: release.target_commitish, status: 'completed', conclusion: 'success', event: 'push' });
     expect(run.jobs).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'build (ubuntu-22.04)', conclusion: 'success', verified_step: 'Run unit tests' }),

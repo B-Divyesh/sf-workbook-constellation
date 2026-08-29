@@ -1,0 +1,18 @@
+{
+  "id": 33281674234,
+  "status": "completed",
+  "conclusion": "success",
+  "event": "push",
+  "head_sha": "97be5bbe87ef7702b26a834bae6afb8c6db8afb0",
+  "head_branch": "v0.1.11",
+  "html_url": "https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33281674234",
+  "run_started_at": "2026-08-29T23:44:23Z",
+  "updated_at": "2026-08-29T23:51:11Z",
+  "jobs": [
+    { "name": "build (ubuntu-22.04)", "conclusion": "success", "verified_step": "Run unit tests" },
+    { "name": "build (windows-latest)", "conclusion": "success", "verified_step": "Exercise Windows installer checksum handling" },
+    { "name": "build (macos-latest, --target x86_64-apple-darwin)", "conclusion": "success" },
+    { "name": "build (macos-latest, --target aarch64-apple-darwin)", "conclusion": "success" },
+    { "name": "manifest", "conclusion": "success", "verified_step": "Write checksums and latest manifest" }
+  ]
+}
