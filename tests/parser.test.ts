@@ -18,6 +18,15 @@ function arithmeticWorkbook(formula: string) {
   return XLSX.write(book, { type: 'array', bookType: 'xlsx' });
 }
 
+function outputWorkbook(formulas: Record<string, string>) {
+  const book = XLSX.utils.book_new();
+  const output = XLSX.utils.aoa_to_sheet([]);
+  for (const [cell, formula] of Object.entries(formulas)) output[cell] = { t: 'n', f: formula };
+  output['!ref'] = 'A1:E3';
+  XLSX.utils.book_append_sheet(book, output, 'Output');
+  return XLSX.write(book, { type: 'array', bookType: 'xlsx' });
+}
+
 describe('formula parser', () => {
   it('extracts quoted sheets, ranges, and external links', () => {
     const parsed = parseFormula("SUM('Sales plan'!$B$2:$B$9)+[old.xlsx]Inputs!C4", 'Summary');
@@ -33,17 +42,36 @@ describe('formula parser', () => {
   });
 
   it('@claim:addin-formulas flags add-in formulas the app cannot trace', () => {
-    const parsed = parseFormula('_xll.CustomForecast(Input!A1)', 'Summary');
-    expect(parsed.warnings).toContain('opaque');
-    expect(parsed.precedents).toContainEqual({ sheet: 'Input', ref: 'A1', external: undefined });
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([[42]]), 'Input');
+    const output = XLSX.utils.aoa_to_sheet([[0]]);
+    output.A1 = { t: 'n', f: '_xll.CustomForecast(Input!A1)' };
+    XLSX.utils.book_append_sheet(book, output, 'Output');
+    const audit = auditWorkbook(XLSX.write(book, { type: 'array', bookType: 'xlsx' }), 'add-in.xlsx');
+    expect(audit.formulas[0].precedents).toEqual([{ sheet: 'Input', ref: 'A1', external: undefined }]);
+    expect(audit.warnings).toEqual([expect.objectContaining({ kind: 'opaque', sheet: 'Output', cell: 'A1' })]);
+    expect(reportHtml(audit)).toContain('opaque');
   });
 
-  it('@claim:formula-syntax parses supported A1 references', () => {
+  it('parses supported A1 references', () => {
     expect(parseFormula("SUM('Sales plan'!$B$2:$B$9)+Inputs!C4", 'Summary').precedents).toEqual([
       { sheet: 'Sales plan', ref: '$B$2:$B$9', external: undefined },
       { sheet: 'Inputs', ref: 'C4', external: undefined }
     ]);
     expect(parseFormula('IF(1=1,"Inputs!A1","")', 'Output').precedents).toEqual([]);
+  });
+
+  it('@claim:formula-syntax does not turn scientific notation or function names into references or cycles', () => {
+    const scientific = auditWorkbook(outputWorkbook({ A1: '1E3', E3: 'A1' }), 'scientific.xlsx');
+    expect(scientific.formulas.find(formula => formula.cell === 'A1')?.precedents).toEqual([]);
+    expect(scientific.formulas.find(formula => formula.cell === 'E3')?.precedents).toEqual([{ sheet: 'Output', ref: 'A1', external: undefined }]);
+    expect(scientific.warnings.filter(warning => warning.kind === 'circular')).toEqual([]);
+    expect(reportHtml(scientific)).toContain('<li>No flagged formulas.</li>');
+
+    const functionName = auditWorkbook(outputWorkbook({ A1: 'LOG10(100)' }), 'function.xlsx');
+    expect(functionName.formulas[0].precedents).toEqual([]);
+    expect(functionName.warnings).toEqual([]);
+    expect(reportHtml(functionName)).toContain('<li>No flagged formulas.</li>');
   });
 
   it('ignores cell-looking text inside Excel string literals', () => {

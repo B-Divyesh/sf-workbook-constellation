@@ -7,6 +7,8 @@ import type { Audit, FormulaRecord, SheetEdge, WarningKind } from './types';
 const cellRef = /(?:(?:'((?:[^']|'')+)'|((?:\[[^\]\r\n]+\])?[\p{L}_][\p{L}\p{N}_.]*))!)?(\$?[A-Z]{1,3}\$?\d+)(?::(\$?[A-Z]{1,3}\$?\d+))?/gu;
 const opaqueFunctions = /(?:\b(?:INDIRECT|OFFSET|WEBSERVICE|CUBE(?:VALUE|MEMBER)|RTD)\s*\(|(?:_xll\.|_xludf\.)[\p{L}_][\p{L}\p{N}_.]*\s*\()/iu;
 const externalBook = /\[([^\]]+)\]/;
+const excelAddress = /^(\$?)([A-Z]{1,3})(\$?)([1-9]\d*)$/;
+const identifierPart = /[\p{L}\p{N}_.]/u;
 
 // Excel escapes a quote inside a string by doubling it. Keep every character
 // outside those strings at its original offset so the reference matcher can
@@ -35,6 +37,25 @@ function cleanSheet(value: string | undefined, current: string) {
   return (value?.replace(/''/g, "'").replace(externalBook, '') || current).trim();
 }
 
+function isExcelAddress(value: string) {
+  const match = value.match(excelAddress);
+  if (!match) return false;
+  let column = 0;
+  for (const char of match[2]) column = column * 26 + char.charCodeAt(0) - 64;
+  return column <= 16_384 && Number(match[4]) <= 1_048_576;
+}
+
+function isReferenceToken(searchable: string, match: RegExpExecArray) {
+  const before = searchable[match.index - 1];
+  const after = searchable[match.index + match[0].length];
+  // A1 tokens cannot be embedded in literals, identifiers, structured
+  // references, or a function call. This keeps 1E3 and LOG10(100) from
+  // becoming E3 and LOG10 precedents while retaining normal operators,
+  // ranges, and explicit sheet references.
+  if ((before && identifierPart.test(before)) || (after && identifierPart.test(after)) || after === '(') return false;
+  return isExcelAddress(match[3]) && (!match[4] || isExcelAddress(match[4]));
+}
+
 export function parseFormula(formula: string, currentSheet: string) {
   const precedents: FormulaRecord['precedents'] = [];
   const warnings = new Set<WarningKind>();
@@ -43,6 +64,7 @@ export function parseFormula(formula: string, currentSheet: string) {
   let match: RegExpExecArray | null;
   cellRef.lastIndex = 0;
   while ((match = cellRef.exec(searchable))) {
+    if (!isReferenceToken(searchable, match)) continue;
     const rawSheet = match[1] || match[2];
     const external = rawSheet?.match(externalBook)?.[1];
     if (external) warnings.add('external');

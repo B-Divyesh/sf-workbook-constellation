@@ -36,6 +36,15 @@ function referenceWorkbook(formula: string) {
   return Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }));
 }
 
+function outputWorkbook(formulas: Record<string, string>) {
+  const book = XLSX.utils.book_new();
+  const output = XLSX.utils.aoa_to_sheet([]);
+  for (const [cell, formula] of Object.entries(formulas)) output[cell] = { t: 'n', f: formula };
+  output['!ref'] = 'A1:E3';
+  XLSX.utils.book_append_sheet(book, output, 'Output');
+  return Buffer.from(XLSX.write(book, { type: 'array', bookType: 'xlsx' }));
+}
+
 test('@claim:sample-map loads a useful eight-sheet dependency map', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Northstar-2026-plan.xlsx');
@@ -119,6 +128,28 @@ for (const { formula, ref } of [
     expect(report).toContain(`<td>Inputs!${ref}</td><td>Output!A1</td><td><code>=${formula}</code></td>`);
   });
 }
+
+test('does not show false sources or cycles for scientific notation and function names', async ({ page }) => {
+  await page.goto('/');
+  await page.setInputFiles('#file', {
+    name: 'scientific.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: outputWorkbook({ A1: '1E3', E3: 'A1' })
+  });
+  await expect(page.getByRole('heading', { name: '0 warnings found' })).toBeVisible();
+  const sourceRow = (cell: string) => page.locator('.formula-table tbody tr').filter({ has: page.locator('td:first-child code', { hasText: new RegExp(`^${cell}$`) }) });
+  await expect(sourceRow('Output!A1')).toContainText('None found');
+  await expect(sourceRow('Output!E3')).toContainText('Output!A1');
+
+  await page.getByRole('button', { name: 'Open another file' }).click();
+  await page.setInputFiles('#file', {
+    name: 'function.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: outputWorkbook({ A1: 'LOG10(100)' })
+  });
+  await expect(page.getByRole('heading', { name: '0 warnings found' })).toBeVisible();
+  await expect(sourceRow('Output!A1')).toContainText('None found');
+});
 
 test('@claim:json-export gives licensed users machine-readable evidence', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
