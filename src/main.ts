@@ -95,7 +95,16 @@ function render(path = location.pathname) {
   if (path === '/') void loadDownload();
 }
 
-function navigate(path: string) { history.pushState({}, '', path); audit = path === '/demo' ? sampleAudit : path === '/' ? audit : null; render(path); scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })); }
+function focusRouteHeading() {
+  requestAnimationFrame(() => {
+    const heading = document.querySelector<HTMLElement>('h1');
+    const status = document.querySelector<HTMLElement>('#route-status');
+    if (status && heading) status.textContent = heading.textContent || document.title;
+    heading?.focus({ preventScroll: true });
+  });
+}
+
+function navigate(path: string) { history.pushState({}, '', path); audit = path === '/demo' ? sampleAudit : path === '/' ? audit : null; render(path); scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); focusRouteHeading(); }
 
 async function handleFile(file: File) {
   const status = document.querySelector('#file-status');
@@ -132,7 +141,7 @@ function bind() {
   document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', async e => { e.preventDefault(); const field = new FormData(e.currentTarget as HTMLFormElement).get('license')?.toString() || ''; const status = document.querySelector('#license-status')!; saveLicense(field); status.textContent = 'Checking this license…'; status.textContent = await verifyLicense() ? 'License verified. Larger workbooks are ready.' : 'This license is not active. Check the token and try again.'; });
 }
 
-addEventListener('popstate', () => { render(); requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true })); });
+addEventListener('popstate', () => { render(); focusRouteHeading(); });
 void verifyLicense().then(valid => { if (valid && audit) render(); });
 render();
 if ('serviceWorker' in navigator && !('__TAURI_INTERNALS__' in window)) addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));

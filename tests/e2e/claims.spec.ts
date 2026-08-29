@@ -194,3 +194,19 @@ test('keeps persistent demo actions at least 44px at the 390px viewport', async 
     expect(box?.height).toBeGreaterThanOrEqual(44);
   }
 });
+
+test('keeps every visible mobile control at least 44 CSS pixels tall', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+    await page.goto(path);
+    const shortControls = await page.locator('a, button, input').evaluateAll(elements => elements
+      .filter(element => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return style.visibility !== 'hidden' && style.display !== 'none' && box.width > 1 && box.height > 1;
+      })
+      .map(element => ({ text: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, height: element.getBoundingClientRect().height }))
+      .filter(item => item.height < 44));
+    expect(shortControls, `${path} has undersized controls`).toEqual([]);
+  }
+});

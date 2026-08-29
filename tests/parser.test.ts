@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as XLSX from 'xlsx';
 import { auditWorkbook, buildAudit, parseFormula } from '../src/parser';
 
@@ -24,6 +24,7 @@ describe('formula parser', () => {
   });
 
   it('@claim:read-only-boundaries reports formulas without evaluating macro content', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const book = XLSX.utils.book_new();
     const sheet = XLSX.utils.aoa_to_sheet([[''], ['macro-like text: Shell("bad")']]);
     sheet.A1 = { t: 'n', f: 'Input!A1' };
@@ -34,6 +35,8 @@ describe('formula parser', () => {
     expect(result.formulas[0].formula).toBe('=Input!A1');
     expect(result).not.toHaveProperty('calculatedValues');
     expect(JSON.stringify(result)).not.toContain('Shell("bad")');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it('detects a cross-sheet cycle', () => {

@@ -7,3 +7,4 @@
 .proof-panel .section-kicker{color:#78c6cc}.edge-hit{left:calc(var(--mx) - 22px);top:calc(var(--my) - 22px);width:44px;height:44px;border-radius:50%}
 .edge-hit{opacity:1;color:transparent}.edge-hit:after{content:"";width:8px;height:8px;border-radius:50%;background:#19a3af;box-shadow:0 0 0 4px #101920}.edge-hit:focus-visible{outline-color:#efb859}
 .demo-bar button{min-height:44px;padding:8px 12px}
+.wordmark,.download-action a,footer a,.legal a{min-height:44px;display:inline-flex;align-items:center}

@@ -55,7 +55,7 @@ Encrypted or damaged files cannot be read. Structured table references, dynamic 
 
 Workbook parsing happens in the browser or desktop webview. The app sends a network request only when the user asks to buy or verify a license, or when the landing page checks GitHub for a published installer. No analytics, third-party scripts, or remote fonts are included.
 
-Files are limited to 50 MB before parsing. Reports escape workbook-controlled text. Treat every report as structural evidence and compare important paths against the source workbook.
+Files are limited to 50 MB before parsing. The audit screen and exported reports render workbook-controlled text without treating it as markup. Treat every report as structural evidence and compare important paths against the source workbook.
 
 ## Project map
 
