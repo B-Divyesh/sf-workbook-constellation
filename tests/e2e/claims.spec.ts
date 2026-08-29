@@ -54,6 +54,17 @@ test('@claim:sample-map loads a useful eight-sheet dependency map', async ({ pag
   await expect(page.locator('.warning-kind')).toHaveText(['external', 'opaque']);
 });
 
+test('uses one name for formula paths and literal recovery copy across the landing routes', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('See a completed map of formula paths between sheets.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Desktop workbook walkthrough' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Map and export a workbook in three steps' })).toBeVisible();
+  await expect(page.getByText('Trace formula paths between sheets.')).toBeVisible();
+  await page.goto('/not-a-real-page');
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Return to Workbook Constellation' })).toBeVisible();
+});
+
 test('@claim:path-evidence shows the exact cells and formula for a selected path', async ({ page }) => {
   await page.goto('/?demo=1');
   await page.getByRole('button', { name: /Forecast to Dashboard/ }).click();

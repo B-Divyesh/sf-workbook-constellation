@@ -2,11 +2,11 @@
 
 Map workbook formulas before you change a cell.
 
-Workbook Constellation is for people inheriting operational or financial XLSX files. It maps formulas between sheets and flags links that need review. You can export the map as an HTML report. It does not calculate cells, edit workbooks, run macros, or open external links.
+Workbook Constellation is for people inheriting operational or financial XLSX files. It maps formula paths between sheets and flags paths that need review. You can export the map as an HTML report. It does not calculate cells, edit workbooks, run macros, or open external links.
 
-The free tier reads workbooks with up to eight sheets and exports HTML reports. Constellation Plus costs $19 once, accepts workbooks above eight sheets, and adds JSON evidence export. Licenses use the Sociobot billing API; workbook contents never enter that request.
+The free tier reads workbooks with up to eight sheets and exports HTML reports. Constellation Plus costs $19 once, accepts workbooks above eight sheets, and adds JSON evidence export. License checks use Sociobot. They never send workbook contents.
 
-## Try the sandbox
+## Try the demo
 
 Open `/?demo=1` or visit <https://workbook-constellation.sociobot.in/?demo=1>. The bundled Northstar planning workbook shows eight sheets, seven formulas, nine paths, and two warning types. Select a path to see its exact source cell, destination cell, and formula. No account or file is needed. The demo reopens offline after the first visit.
 
@@ -54,7 +54,7 @@ Encrypted workbooks show a specific error. Damaged files cannot be read. The map
 
 ## Privacy and security
 
-Workbook parsing runs in the browser or desktop webview. The app contacts Sociobot only when you buy or verify a license. GitHub is contacted only when you check for a newer installer. No analytics, third-party scripts, or remote fonts are included.
+Workbook parsing runs inside the web or desktop app. The app contacts Sociobot only when you buy or verify a license. GitHub is contacted only when you check for a newer installer. No analytics, third-party scripts, or remote fonts are included.
 
 Files are limited to 50 MB before parsing. The audit screen and exported reports show workbook-controlled text without treating it as markup. Check important paths against the original workbook before you act on the report.
 

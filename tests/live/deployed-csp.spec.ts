@@ -37,7 +37,7 @@ test('deployed unknown routes keep HTTP 404 and versioned assets are immutable',
 
   const missing = await page.goto('/not-a-route', { waitUntil: 'networkidle' });
   expect(missing?.status()).toBe(404);
-  await expect(page.getByRole('heading', { name: 'This sheet is not in the workbook' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
 });
 
 test('deployed demo remains keyboard-accessible at the 390px mobile viewport', async ({ page }) => {

@@ -1,1 +1,1 @@
-Map workbook formulas and inspect exact cell paths before you edit.
+Map formula paths between sheets before you edit a workbook.

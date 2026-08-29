@@ -8,7 +8,7 @@ Audited 2026-08-29. Counts treat hyphenated terms and numerals as one word. No l
 | Map workbook formulas before you edit | 6 | pass |
 | For people inheriting complex workbooks who need to trace formulas between sheets before making changes. | 14 | pass |
 | Try it with sample data | 5 | pass |
-| See a completed map of links between sheets. | 8 | pass |
+| See a completed map of formula paths between sheets. | 9 | pass |
 | Files stay on this device | 5 | pass |
 | Works without an account | 4 | pass |
 | Free for workbooks up to 8 sheets | 7 | pass |
@@ -24,20 +24,20 @@ Audited 2026-08-29. Counts treat hyphenated terms and numerals as one word. No l
 | Select a sheet or a path. | 6 | pass |
 | The evidence panel lists the exact cells behind it. | 9 | pass |
 | Desktop walkthrough | 2 | pass |
-| See the workbook flow | 4 | pass |
+| Desktop workbook walkthrough | 3 | pass |
 | Open a workbook. | 3 | pass |
 | The map lists sheets, formulas, paths, and warnings. | 8 | pass |
 | Inspect a path. | 3 | pass |
-| Select a link to see its source cells and saved formula. | 11 | pass |
+| Select a path to see its source cells and saved formula. | 11 | pass |
 | Save the report. | 3 | pass |
 | Open the HTML file later without Workbook Constellation. | 8 | pass |
 | How it works | 3 | pass |
-| Three steps from file to handoff | 6 | pass |
+| Map and export a workbook in three steps | 8 | pass |
 | Open the workbook | 3 | pass |
 | Choose an XLSX or XLSM file. | 6 | pass |
 | Macro code is never run. | 5 | pass |
 | Inspect the paths | 3 | pass |
-| Trace links between sheets. | 4 | pass |
+| Trace formula paths between sheets. | 5 | pass |
 | Review external workbook links, circular references, and formulas the app cannot trace. | 12 | pass |
 | Export the report | 3 | pass |
 | Save an HTML report that opens without this app. | 9 | pass |

@@ -6,7 +6,7 @@ test('live mobile first screen contains the job, audience, action, and three fac
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.getByRole('heading', { name: 'Map workbook formulas before you edit' })).toBeVisible();
   await expect(page.getByText('For people inheriting complex workbooks who need to trace formulas between sheets before making changes.')).toBeVisible();
-  await expect(page.getByText('See a completed map of links between sheets.')).toBeVisible();
+  await expect(page.getByText('See a completed map of formula paths between sheets.')).toBeVisible();
   const required = [page.getByRole('button', { name: 'Try it with sample data' }), ...await page.locator('.facts li').all()];
   for (const element of required) {
     const box = await element.boundingBox();
