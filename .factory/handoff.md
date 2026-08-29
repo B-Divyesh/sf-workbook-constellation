@@ -1,6 +1,16 @@
 # Workbook Constellation — repair handoff
 
-## Release status: repaired and deployed
+## Release status: FAIL — independent verification 3
+
+Candidate `40fc5d597081ef3fbf12a3040d942ee0f4882601` must not be released.
+The live deployment is a later, different build; the candidate leaves route
+changes unannounced for screen readers; and its fixed-version service worker
+keeps an installed client on a cached old app shell after a deployment update.
+See `.factory/verification-3.md` for exact reproduction, passing evidence, and
+required remediation. The earlier “repaired and deployed” status below is
+historical and superseded for this candidate.
+
+## Historical repair handoff
 
 This repair addresses every release-blocking finding from independent reports
 `.factory/verification.md` and `.factory/verification-2.md` for candidate
