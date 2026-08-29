@@ -19,7 +19,7 @@ npm run build:app
 npm run test:live -- --grep @claim:checkout-handoff
 ```
 
-- All 25 declared claim tests passed independently from the demo entry point.
+- All 24 declared claim tests passed independently from the demo entry point.
 - `npm test` passed (30 unit + 34 browser tests); deploy and desktop frontend
   builds passed.
 - Live app content exactly matches the candidate web build; normal/demo flows,

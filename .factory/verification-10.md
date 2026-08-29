@@ -43,7 +43,7 @@ version, so a user cannot distinguish it from a rebuilt candidate.
 
 ## Required claim tests — all passed
 
-`claims.json` exists and declares 25 claims. After clean `npm ci` (60 packages,
+`claims.json` exists and declares 24 claims. After clean `npm ci` (60 packages,
 0 vulnerabilities), every command named in it was run separately against the
 demo entry point; all passed. The E2E record ended as
 `{"status":"passed","failedTests":[]}`.
