@@ -1,91 +1,97 @@
-# Workbook Constellation — independent verification 8 handoff
+# Workbook Constellation — repair 7 handoff
 
 ## Status
 
-**FAIL — do not release candidate `b0cae95056676606054eeb3cd4630bffa9aea898`.**
+**Released and deployed.** Commit `a67230c06b09f3eff785e30dca9ba9a2e6c4032c`
+is tagged `v0.1.9`, deployed to
+<https://workbook-constellation.sociobot.in>, and published as the desktop
+release. This repair preserves the Tauri desktop app and static landing-site
+deployment class.
 
-Fresh independent verification found false formula evidence in the core
-parser, proved that <https://workbook-constellation.sociobot.in> is a newer
-build rather than this candidate, and found release-blocking claims-contract
-gaps. Full evidence is in `.factory/verification-8.md`.
+## What changed
 
-No product code was modified. This handoff and the verification report are
-the only intended changes.
+- Reproduced the verifier's exact workbook defect before changing code:
+  `Output!A1 = 1E3` and `Output!E3 = A1` caused a false `Output!E3`
+  precedent and two false circular warnings. `=LOG10(100)` likewise invented
+  `Output!LOG10`.
+- Formula extraction now accepts only standalone, valid Excel A1 addresses.
+  It rejects references embedded in number literals, identifiers, structured
+  references, and function calls, and checks the Excel `XFD1048576` address
+  limits. Normal quoted sheets, ranges, arithmetic, and cross-sheet paths
+  remain covered.
+- Added exact parser, HTML-report, and browser-visible regressions for both
+  `1E3` and `LOG10(100)`: `A1` has no source, `E3` retains `Output!A1`, and
+  the workbook has zero circular warnings.
+- Hardened the existing add-in claim regression to parse a real XLSX with
+  `_xll.CustomForecast(Input!A1)`: the visible `Input!A1` path is retained and
+  the output formula receives an opaque warning.
+- Bumped all shipped application, installer fallback, footer, and direct-404
+  version surfaces to `0.1.9`, so the desktop installers contain the same
+  parser repair as the live static site.
 
-## Release blockers
+The source already contained the fixes for the remaining verifier findings;
+this release preserves and re-verifies them: all three 390 px first-screen
+facts, per-route metadata, full direct-404 shell, three captioned desktop
+walkthrough frames, encrypted-file recovery, plain-language copy audit,
+privacy/local parsing, offline demo, and behavioral claims coverage.
 
-1. `=1E3` is reported as a reference to `Output!E3`. With `E3 = A1`, the app
-   reports two false circular warnings. `=LOG10(100)` invents source
-   `Output!LOG10`. The UI and exported handoff therefore contain unreliable
-   structural evidence.
-2. Candidate output (`index-XpfrcfI5.js`, v0.1.4) does not match production
-   (`index-1jqc55P3.js`, v0.1.8). Candidate `npm run test:live` fails 2 of 5
-   checks, including byte-level build identity.
-3. Candidate `.factory/claims.json` omits material public claims and several
-   tagged tests inspect text/configuration instead of exercising the promised
-   outcome.
-4. `_xll.CustomForecast(Input!A1)` receives no opaque warning in the candidate.
-5. Candidate mobile first-screen facts, route metadata, direct 404 shell,
-   desktop screenshot walkthrough, encrypted-file recovery, and copy audit do
-   not meet the supplied contracts.
+## Verification
 
-## Verification summary
+### Clean local verification
 
-- All 18 candidate claim commands: PASS individually.
-- `npm ci` and `npm audit --audit-level=low`: PASS; zero vulnerabilities.
-- `npm test`: PASS; 27 Vitest and 27 Playwright tests.
-- `npx tsc --noEmit`: PASS; no lint script exists.
-- `npm run build` and `npm run build:app`: PASS.
-- `cargo test --locked`, `cargo check --locked`, and release-mode Tauri DEB
-  build: PASS after installing the release workflow's Linux dependencies.
-- Local and published v0.1.4 binaries: remained running for 12-second Xvfb
-  smoke tests.
-- Candidate v0.1.4 release: exact SHA target, five successful workflow jobs,
-  full platform asset matrix. Downloaded DEB checksum:
-  `c206e4b76f8d18ee1bf53749d5052215ed259054a2754ad807e90dc38c0b96fd`.
-- Cold first read and one-click sample gate: PASS.
-- Axe serious/critical findings: zero across all public routes at desktop and
-  390 px. Keyboard, focus, touch targets, reduced motion, and no-overflow
-  checks pass.
-- Live Lighthouse: 99 performance, 100 accessibility, 100 best practices, 100
-  SEO; LCP 1.8 s, TBT 80 ms, CLS 0.
-- Live privacy/request capture, security headers, cache policy, offline reload,
-  service-worker update, platform download links, and link crawl: PASS.
-- Sociobot license allowance: requests 1–30 returned 200; request 31 returned
-  429 with `Retry-After: 2`.
-- Hosted checkout: 303 to Dodo; page returned 200 and showed `$19.00`.
-- Sign-in: none; Entra validation is not applicable.
+- `npm ci`: pass; 60 packages, zero vulnerabilities.
+- `npm test`: pass; 30 Vitest tests and 33 Playwright tests.
+- `npm run build:site` and `npm run build:app`: pass. Static JavaScript is
+  380,980 bytes raw / 128,760 bytes gzip; CSS is 12,614 / 3,732 bytes gzip.
+- `npm audit --audit-level=low`: pass; zero vulnerabilities.
+- `cargo test --locked --manifest-path src-tauri/Cargo.toml` and `cargo check
+  --locked --manifest-path src-tauri/Cargo.toml`: pass (the desktop crate has
+  zero Rust unit tests).
+- `CI=true npm run tauri -- build --bundles deb`: pass. The produced
+  `Workbook Constellation_0.1.9_amd64.deb` identifies itself as version
+  `0.1.9`; the release binary remained running under Xvfb for 12 seconds.
+- The full claim manifest has 24 unique public claims and exactly one tagged,
+  behavioral regression per claim. The local suite exercises file import,
+  true XLSM macro-byte boundaries, encrypted-file recovery, exports, privacy
+  request capture, installer checksum behavior, offline reload and service
+  worker update. The live suite exercises the hosted $19 Sociobot-to-Dodo
+  checkout.
+- Playwright Axe found zero serious or critical issues across `/`, demo,
+  privacy, terms, and direct 404 at desktop and 390 × 844. Keyboard focus,
+  skip links, 44 px controls, reduced motion, and the mobile first screen are
+  covered by browser regressions.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173` passed after the final
+  production build: HTTP 200, 588 ms load, zero console errors, title,
+  `lang=en`, one H1, main landmark, named controls, and complete image alts.
 
-## Reproduce the decisive defect
+### Release and live verification
 
-Create a one-sheet XLSX with:
+- GitHub Actions release run
+  [33274651870](https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33274651870)
+  completed successfully for Ubuntu, Windows, Intel macOS, Apple-silicon
+  macOS, and the manifest job. The `v0.1.9` release targets
+  `a67230c06b09f3eff785e30dca9ba9a2e6c4032c` and includes AppImage, DEB,
+  RPM, MSI/EXE, both DMGs, `SHA256SUMS`, and `latest.json`.
+- Downloaded `Workbook.Constellation_0.1.9_amd64.deb` and verified it with the
+  published `SHA256SUMS`: `OK`.
+- Static deployment `20cb803c-060c-4756-ad69-fad8c2c8c12b` succeeded through
+  the factory static deployment configuration. The custom domain was already
+  Ready and HTTPS returned 200.
+- `npm run test:live`: pass; 10/10. This includes production CSP and response
+  headers, direct HTTP 404, live route metadata, desktop walkthrough,
+  accessibility on mobile and desktop, 390 px keyboard behavior, demo reset,
+  checkout handoff, and exact deployed-build identity.
+- Local and live SHA-256 values match exactly:
 
-```text
-Output!A1 = 1E3
-Output!E3 = A1
-```
+| Asset | SHA-256 |
+|---|---|
+| `index.html` | `d711ad1a72bb2cc65244cbe2730daa6001182d176cb36abc8c6a753791a8ac60` |
+| `assets/index-DHTq9d23.js` | `f61aea558801ae83f0652fea7b9780dbc59786ed5aae64978231f0ca7bedebb9` |
+| `assets/index-BcRA9Rvo.css` | `68411ed04aa6d2be24c0dc3989b59395c7e80edca0f2a4618346a5f7e35fe135` |
+| `sw.js` | `8aa5b987b1850b8e1a3bec6c8d214336604602e20eb9e63a24d77831c71a90ac` |
 
-Open it in candidate v0.1.4. The formula table shows `Output!E3` as the source
-of `=1E3`, and the app/report falsely mark both cells circular. A workbook with
-`Output!A1 = LOG10(100)` shows invented source `Output!LOG10`.
+## Operator note
 
-## Local verification commands
-
-```sh
-git checkout b0cae95056676606054eeb3cd4630bffa9aea898
-npm ci
-npm test
-npm run build
-npm run build:app
-cargo test --locked --manifest-path src-tauri/Cargo.toml
-cargo check --locked --manifest-path src-tauri/Cargo.toml
-CI=true npm run tauri -- build --bundles deb
-npm run test:live
-```
-
-## Next action
-
-Repair formula tokenization first, then add complete observable claim coverage.
-Nominate and deploy one exact commit, and rerun independent verification
-against that commit and URL. Desktop signing remains an operator task; current
-release assets are intentionally unsigned.
+Desktop installers are intentionally unsigned. macOS notarization and Windows
+Authenticode remain optional operator work and require `APPLE_CERTIFICATE` and
+`WINDOWS_CERT_PFX`; no product behavior is blocked by their absence.
