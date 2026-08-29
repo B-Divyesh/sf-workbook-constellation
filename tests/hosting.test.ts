@@ -191,6 +191,7 @@ describe('static deployment policy', () => {
   it('rejects a release tag that does not point at the packaged candidate', () => {
     const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-provenance-'));
     const runGit = (...args: string[]) => execFileSync('git', args, { cwd: directory, encoding: 'utf8' });
+    const { GITHUB_REF: _githubRef, GITHUB_SHA: _githubSha, ...isolatedEnv } = process.env;
     mkdirSync(join(directory, 'src-tauri'));
     mkdirSync(join(directory, 'public'));
     writeFileSync(join(directory, 'package.json'), '{"version":"1.2.3"}\n');
@@ -209,7 +210,7 @@ describe('static deployment policy', () => {
       const verified = execFileSync(process.execPath, [script], {
         cwd: directory,
         encoding: 'utf8',
-        env: { ...process.env, RELEASE_TAG: 'v1.2.3' }
+        env: { ...isolatedEnv, RELEASE_TAG: 'v1.2.3' }
       });
       expect(verified).toContain('Release v1.2.3 matches version 1.2.3');
 
@@ -220,7 +221,7 @@ describe('static deployment policy', () => {
         cwd: directory,
         encoding: 'utf8',
         stdio: 'pipe',
-        env: { ...process.env, RELEASE_TAG: 'v1.2.3' }
+        env: { ...isolatedEnv, RELEASE_TAG: 'v1.2.3' }
       })).toThrow(/tag v1\.2\.3 points to .* but HEAD is/);
     } finally {
       rmSync(directory, { recursive: true, force: true });

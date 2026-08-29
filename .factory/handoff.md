@@ -2,14 +2,14 @@
 
 ## Status
 
-Release candidate `0.1.10` repairs every blocking finding in independent
+Release candidate `0.1.11` repairs every blocking finding in independent
 verification 10 (`6366531`, candidate `997562d`). The desktop app remains a
 Tauri 2 application and the website remains a static deployment.
 
 ## Repairs
 
 - Bumped the package, Cargo, Tauri, web footer, static 404, and shipped download
-  fallback from `0.1.9` to `0.1.10`. Web version text and asset names now derive
+  fallback from `0.1.9` to `0.1.11`. Web version text and asset names now derive
   from `package.json` during the Vite build.
 - Added `scripts/verify-release.mjs`. Every release job checks out the requested
   tag and rejects a missing tag, version mismatch, or tag that does not point at
@@ -50,18 +50,18 @@ Evidence on Ubuntu 24.04:
 - Site and desktop frontend builds passed TypeScript checking. Production JS is
   126,239 bytes gzip; CSS is 3,726 bytes gzip.
 - `cargo test --locked` passed. The exact native command completed and produced
-  `Workbook Constellation_0.1.10_amd64.deb`,
-  `Workbook Constellation-0.1.10-1.x86_64.rpm`, and
-  `Workbook Constellation_0.1.10_amd64.AppImage`.
-- `/opt/fleet/lib/verify-url.sh` reported HTTP 200, one `h1`, `lang=en`, a main
+  `Workbook Constellation_0.1.11_amd64.deb`,
+  `Workbook Constellation-0.1.11-1.x86_64.rpm`, and
+  `Workbook Constellation_0.1.11_amd64.AppImage`.
+- `/opt/fleet/lib/verify-url.sh` reported HTTP 200 in 626 ms, one `h1`, `lang=en`, a main
   landmark, no missing alt text, no unlabeled buttons, and no console errors.
-- Production-mode mobile Lighthouse: performance 99, accessibility 100, best
-  practices 100, SEO 100; LCP 1.9 s, CLS 0, total blocking time 10 ms.
+- Production-mode mobile Lighthouse: performance 98, accessibility 100, best
+  practices 100, SEO 100; LCP 2.2 s, CLS 0, total blocking time 0 ms.
 - Evidence is in `.factory/qa-artifacts/repair-8/`.
 
 ## Release and deployment
 
-Tag `v0.1.10` must point at the repair commit. `.github/workflows/release.yml`
+Tag `v0.1.11` must point at the repair commit. `.github/workflows/release.yml`
 builds Linux, Windows, Intel macOS, and Apple silicon macOS installers and then
 publishes `SHA256SUMS` and `latest.json`. Deploy `dist/site` with:
 
