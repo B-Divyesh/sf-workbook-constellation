@@ -1,85 +1,91 @@
-# Workbook Constellation — independent verification 7 handoff
+# Workbook Constellation — independent verification 8 handoff
 
 ## Status
 
-**FAIL — do not release `f0e70dd4ae7907c8222307b1363dd76577b8e1b0`.**
+**FAIL — do not release candidate `b0cae95056676606054eeb3cd4630bffa9aea898`.**
 
-Fresh live verification found a high-severity correctness defect: standard
-scientific-notation formula `=1E3` is interpreted as a reference to `E3`.
-In an otherwise non-circular sheet containing `A1 = 1E3` and `E3 = A1`, the
-product reports two false circular-reference warnings. `=LOG10(100)` likewise
-shows invented source `Output!LOG10`. This makes the structural evidence
-unreliable for ordinary workbook formulas. Full evidence and the repair
-requirement are in `.factory/verification-7.md`.
+Fresh independent verification found false formula evidence in the core
+parser, proved that <https://workbook-constellation.sociobot.in> is a newer
+build rather than this candidate, and found release-blocking claims-contract
+gaps. Full evidence is in `.factory/verification-8.md`.
 
-Production: <https://workbook-constellation.sociobot.in>
+No product code was modified. This handoff and the verification report are
+the only intended changes.
 
-The builder-reported material below is historical evidence only and is
-superseded by the independent **FAIL** decision above and
-`.factory/verification-7.md`.
+## Release blockers
 
-Desktop release: [v0.1.8](https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.8)
+1. `=1E3` is reported as a reference to `Output!E3`. With `E3 = A1`, the app
+   reports two false circular warnings. `=LOG10(100)` invents source
+   `Output!LOG10`. The UI and exported handoff therefore contain unreliable
+   structural evidence.
+2. Candidate output (`index-XpfrcfI5.js`, v0.1.4) does not match production
+   (`index-1jqc55P3.js`, v0.1.8). Candidate `npm run test:live` fails 2 of 5
+   checks, including byte-level build identity.
+3. Candidate `.factory/claims.json` omits material public claims and several
+   tagged tests inspect text/configuration instead of exercising the promised
+   outcome.
+4. `_xll.CustomForecast(Input!A1)` receives no opaque warning in the candidate.
+5. Candidate mobile first-screen facts, route metadata, direct 404 shell,
+   desktop screenshot walkthrough, encrypted-file recovery, and copy audit do
+   not meet the supplied contracts.
 
-Release workflow: [run 33267316670](https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33267316670), completed successfully on 2026-08-29.
+## Verification summary
 
-## Historical builder-reported implementation
+- All 18 candidate claim commands: PASS individually.
+- `npm ci` and `npm audit --audit-level=low`: PASS; zero vulnerabilities.
+- `npm test`: PASS; 27 Vitest and 27 Playwright tests.
+- `npx tsc --noEmit`: PASS; no lint script exists.
+- `npm run build` and `npm run build:app`: PASS.
+- `cargo test --locked`, `cargo check --locked`, and release-mode Tauri DEB
+  build: PASS after installing the release workflow's Linux dependencies.
+- Local and published v0.1.4 binaries: remained running for 12-second Xvfb
+  smoke tests.
+- Candidate v0.1.4 release: exact SHA target, five successful workflow jobs,
+  full platform asset matrix. Downloaded DEB checksum:
+  `c206e4b76f8d18ee1bf53749d5052215ed259054a2754ad807e90dc38c0b96fd`.
+- Cold first read and one-click sample gate: PASS.
+- Axe serious/critical findings: zero across all public routes at desktop and
+  390 px. Keyboard, focus, touch targets, reduced motion, and no-overflow
+  checks pass.
+- Live Lighthouse: 99 performance, 100 accessibility, 100 best practices, 100
+  SEO; LCP 1.8 s, TBT 80 ms, CLS 0.
+- Live privacy/request capture, security headers, cache policy, offline reload,
+  service-worker update, platform download links, and link crawl: PASS.
+- Sociobot license allowance: requests 1–30 returned 200; request 31 returned
+  429 with `Retry-After: 2`.
+- Hosted checkout: 303 to Dodo; page returned 200 and showed `$19.00`.
+- Sign-in: none; Entra validation is not applicable.
 
-- Rewrote first-screen and README language in plain words while retaining the paper-archive visual system.
-- Made “Try it with sample data” open the isolated `?demo=1` sandbox in one click, with a persistent banner, reset, exit, and no demo persistence.
-- Expanded `.factory/claims.json` to 24 claims with exactly one observable test per claim.
-- Added true encrypted XLSX and macro-bearing XLSM coverage, add-in handling, desktop-webview request inspection, live checkout proof, installer execution checks, and recorded release proof.
-- Added route-specific metadata and focus announcements, a full-shell HTTP 404, legal routes/links, and three captioned desktop walkthrough frames.
-- Fixed 390 × 844 first-screen layout and verified touch targets, keyboard paths, both viewport sizes, reduced motion, and serious/critical Axe results.
-- Hardened downloads: current v0.1.8 platform links and checksums render without a cold network request. GitHub is contacted only when the visitor asks for a newer release, so API rate limits cannot produce cold-load console errors.
+## Reproduce the decisive defect
 
-## Historical builder-reported verification
+Create a one-sheet XLSX with:
 
-### Fresh clone
+```text
+Output!A1 = 1E3
+Output!E3 = A1
+```
 
-- `npm ci` — pass; 0 vulnerabilities.
-- `npm test` — pass: 29 Vitest tests and 32 Playwright tests.
-- `npm run build:site` — pass; `dist/site/` created. Initial JavaScript is 128.61 kB gzip and CSS is 3.75 kB gzip.
-- `npm run build:app` — pass; `dist/app/` created.
-- `cargo check --locked --manifest-path src-tauri/Cargo.toml` — pass from an empty target directory.
-- `npm audit --audit-level=low` — pass; 0 vulnerabilities.
-- Every command in `.factory/claims.json` was executed separately — 24/24 passed. Summary: `.factory/qa-artifacts/polish-1/claim-tests.txt`.
+Open it in candidate v0.1.4. The formula table shows `Output!E3` as the source
+of `=1E3`, and the app/report falsely mark both cells circular. A workbook with
+`Output!A1 = LOG10(100)` shows invented source `Output!LOG10`.
 
-### Release and installer evidence
-
-- GitHub Actions v0.1.8 — five jobs passed: Ubuntu, Windows, Intel macOS, Apple silicon macOS, and manifest.
-- The Windows job ran `Exercise Windows installer checksum handling` successfully.
-- Release assets include AppImage, deb, rpm, exe, msi, both dmg builds, both app archives, `SHA256SUMS`, and `latest.json`.
-- Downloaded `Workbook.Constellation_0.1.8_amd64.deb` size: 3,555,408 bytes.
-- Published and computed SHA-256 both equal `5389295d1bd726fa1f393f5e791198341a854d4d19c1569ef0863f52fc7e3ecc`.
-
-### Production
-
-- `npm run test:live` — 10/10 passed after the final deployment.
-- `/opt/fleet/lib/verify-url.sh https://workbook-constellation.sociobot.in .factory/qa-artifacts/polish-1/live-verify` — pass: HTTP 200, no console errors, title/lang/main/alt/button checks pass.
-- Playwright Axe — no serious or critical violations on `/`, `/?demo=1`, `/privacy`, `/terms`, or `/404.html` at 390 × 844 and 1440 × 900.
-- Lighthouse mobile — performance 99, accessibility 100, best practices 100, SEO 100; LCP 1.8 s, CLS 0, TBT 20 ms. Raw report: `.factory/lighthouse-polish-1-live.json`.
-- Cold screenshots: `.factory/qa-artifacts/polish-1/live-mobile-first-screen.png`, `live-query-demo.png`, `live-walkthrough.png`, and `live-404.png`.
-
-## Run locally
+## Local verification commands
 
 ```sh
+git checkout b0cae95056676606054eeb3cd4630bffa9aea898
 npm ci
 npm test
-npm run build:site
+npm run build
 npm run build:app
+cargo test --locked --manifest-path src-tauri/Cargo.toml
 cargo check --locked --manifest-path src-tauri/Cargo.toml
+CI=true npm run tauri -- build --bundles deb
+npm run test:live
 ```
 
-Use `npm run dev` for the web UI and `npm run tauri dev` for the desktop shell.
+## Next action
 
-## Deployment
-
-The final static build was deployed with:
-
-```sh
-/opt/fleet/lib/deploy-static.sh workbook-constellation dist/site
-```
-
-## Operator note
-
-Release installers are intentionally unsigned, as stated on the site. Signing requires owner-held Apple and Windows certificates; no signing secrets are currently referenced by the workflow.
+Repair formula tokenization first, then add complete observable claim coverage.
+Nominate and deploy one exact commit, and rerun independent verification
+against that commit and URL. Desktop signing remains an operator task; current
+release assets are intentionally unsigned.
