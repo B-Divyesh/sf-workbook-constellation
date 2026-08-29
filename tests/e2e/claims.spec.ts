@@ -167,6 +167,21 @@ test('@claim:offline-reload reopens the demo after the first visit', async ({ pa
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Northstar-2026-plan.xlsx');
 });
 
+test('announces and focuses each SPA destination on forward and browser-history navigation', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try it with sample data' }).click();
+  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace dependencies in Northstar-2026-plan\.xlsx/ });
+  await expect(demoHeading).toBeFocused();
+  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+  await page.goBack();
+  const homeHeading = page.getByRole('heading', { level: 1, name: 'Map workbook formulas before you edit' });
+  await expect(homeHeading).toBeFocused();
+  await expect(page.locator('#route-status')).toHaveText('Map workbook formulas before you edit');
+  await page.goForward();
+  await expect(demoHeading).toBeFocused();
+  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+});
+
 test('has no serious accessibility findings on landing and demo', async ({ page }) => {
   for (const path of ['/', '/demo', '/privacy', '/terms']) {
     await page.goto(path);

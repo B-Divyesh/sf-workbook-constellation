@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const apiUrl = 'https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/latest';
 const expectedCsp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.sociobot.in https://api.github.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
@@ -73,4 +76,28 @@ test('deployed demo remains keyboard-accessible at the 390px mobile viewport', a
     const box = await page.getByRole('button', { name }).boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
   }
+});
+
+test('deployed SPA announces destinations and matches this production build', async ({ page }) => {
+  const site = resolve(process.cwd(), 'dist/site');
+  const expectedDocument = readFileSync(resolve(site, 'index.html'));
+  const expectedScript = expectedDocument.toString().match(/<script type="module" crossorigin src="([^"]+)"/)?.[1];
+  if (!expectedScript) throw new Error('Production build has no module script');
+  const expectedScriptBytes = readFileSync(resolve(site, `.${expectedScript}`));
+  const expectedWorker = readFileSync(resolve(site, 'sw.js'));
+
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await expect(page.locator('script[type="module"]')).toHaveAttribute('src', expectedScript);
+  const deployedScript = await page.request.get(expectedScript);
+  expect(createHash('sha256').update(await deployedScript.body()).digest('hex')).toBe(createHash('sha256').update(expectedScriptBytes).digest('hex'));
+  const deployedWorker = await page.request.get('/sw.js');
+  expect(await deployedWorker.text()).toBe(expectedWorker.toString());
+
+  await page.getByRole('button', { name: 'Try it with sample data' }).click();
+  const demoHeading = page.getByRole('heading', { level: 1, name: /Trace dependencies in Northstar-2026-plan\.xlsx/ });
+  await expect(demoHeading).toBeFocused();
+  await expect(page.locator('#route-status')).toHaveText('Trace dependencies in Northstar-2026-plan.xlsx');
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1, name: 'Map workbook formulas before you edit' })).toBeFocused();
+  await expect(page.locator('#route-status')).toHaveText('Map workbook formulas before you edit');
 });

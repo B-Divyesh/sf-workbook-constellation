@@ -12,6 +12,7 @@ let audit: Audit | null = null;
 let selectedSheet = '';
 let selectedEdge: SheetEdge | null = null;
 let isDemo = false;
+let auditFromDemo = false;
 
 captureLicense();
 
@@ -22,7 +23,7 @@ function shell(content: string) {
   ${isDemo ? `<aside class="demo-bar" aria-label="Demo mode"><span><strong>Demo</strong> — sample data, nothing is saved</span><div><button data-action="reset-demo">Reset demo</button><button data-action="leave-demo">Start for real</button></div></aside>` : ''}
   <header class="site-header"><a class="wordmark" href="/" data-link>${icon}<span>Workbook<br>Constellation</span></a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/#how">How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>
   ${content}
-  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.1 · Original generated artwork</p></footer>`;
+  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version 0.1.2 · Original generated artwork</p></footer>`;
 }
 
 function landing() {
@@ -89,7 +90,8 @@ function notFound() {
 
 function render(path = location.pathname) {
   isDemo = path === '/demo';
-  if (isDemo && !audit) audit = sampleAudit;
+  if (isDemo) { audit = sampleAudit; auditFromDemo = true; }
+  else if (auditFromDemo) { audit = null; auditFromDemo = false; }
   app.innerHTML = path === '/' ? (audit ? auditPage() : landing()) : path === '/demo' ? auditPage() : path === '/privacy' ? legalPage('privacy') : path === '/terms' ? legalPage('terms') : notFound();
   bind();
   if (path === '/') void loadDownload();
@@ -104,7 +106,7 @@ function focusRouteHeading() {
   });
 }
 
-function navigate(path: string) { history.pushState({}, '', path); audit = path === '/demo' ? sampleAudit : path === '/' ? audit : null; render(path); scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); focusRouteHeading(); }
+function navigate(path: string) { history.pushState({}, '', path); render(path); scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); focusRouteHeading(); }
 
 async function handleFile(file: File) {
   const status = document.querySelector('#file-status');
@@ -123,8 +125,8 @@ function bind() {
   document.querySelectorAll<HTMLAnchorElement>('a[data-link]').forEach(link => link.addEventListener('click', event => { if (!event.metaKey && !event.ctrlKey) { event.preventDefault(); navigate(new URL(link.href).pathname); } }));
   document.querySelectorAll<HTMLElement>('[data-action]').forEach(button => button.addEventListener('click', () => {
     const action = button.dataset.action;
-    if (action === 'sample') { audit = sampleAudit; navigate('/demo'); }
-    if (action === 'reset-demo') { audit = sampleAudit; selectedEdge = null; selectedSheet = ''; render('/demo'); }
+    if (action === 'sample') navigate('/demo');
+    if (action === 'reset-demo') { selectedEdge = null; selectedSheet = ''; render('/demo'); }
     if (action === 'leave-demo') { audit = null; navigate('/'); }
     if (action === 'new-file') { audit = null; navigate('/'); setTimeout(() => document.querySelector<HTMLElement>('[for="file"]')?.focus(), 0); }
     if (action === 'export-html' && audit) downloadReport(audit);
