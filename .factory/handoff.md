@@ -74,6 +74,13 @@ The static deployment remains at
 - Live Lighthouse: Performance 97, Accessibility 100, Best Practices 100,
   SEO 100; LCP 1.9 s, CLS 0, TBT 10 ms. Machine-readable output:
   `.factory/lighthouse-repair.json`.
+- Desktop release: GitHub Actions run `33234917473` passed its Linux, Windows,
+  Intel macOS, Apple silicon macOS, and manifest jobs. Release `v0.1.1`
+  publishes the expected installers, `SHA256SUMS`, and `latest.json`.
+  Downloaded `Workbook.Constellation_0.1.1_amd64.deb` hashes to
+  `8d086222d32611d86891dc6ae15c5d6a2b4b3684ab2b8554bfe8e99cb9fba0a7`,
+  exactly matching its published checksum. `latest.json` declares version
+  `v0.1.1` and nine assets, including Linux, Windows, and both macOS builds.
 
 ## Known gaps and next steps
 
@@ -84,6 +91,4 @@ The static deployment remains at
   workflow builds Linux, Windows, Intel macOS, and Apple silicon macOS assets;
   signing later requires the operator certificates documented in the prior
   handoff history.
-- The next `v*` tag should publish the 0.1.1 desktop packages and updated
-  checksums through the existing release workflow. No telemetry or analytics
-  was added.
+- Release `v0.1.1` is published. No telemetry or analytics was added.
