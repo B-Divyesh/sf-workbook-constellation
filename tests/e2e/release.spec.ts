@@ -22,7 +22,7 @@ test('@claim:desktop-download uses CORS-safe GitHub metadata to link the detecte
 
   await page.goto('/');
 
-  const download = page.getByRole('link', { name: 'Download for Linux' });
+  const download = page.getByRole('link', { name: 'Download for Linux (external)' });
   await expect(download).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.1\/.+\.AppImage$/);
   await expect(page.getByRole('link', { name: /All downloads and checksums/ })).toHaveAttribute('href', /github\.com\/.+\/releases\/tag\/v0\.1\.1$/);
 });

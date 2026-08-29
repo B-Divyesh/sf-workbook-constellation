@@ -31,7 +31,11 @@ export async function loadDownload() {
     const download = document.createElement('a');
     download.className = 'primary';
     download.href = assetUrl.href;
-    download.textContent = choice.label;
+    download.append(`${choice.label} `);
+    const downloadExternal = document.createElement('span');
+    downloadExternal.className = 'sr-only';
+    downloadExternal.textContent = '(external)';
+    download.append(downloadExternal);
     const allDownloads = document.createElement('a');
     allDownloads.href = releaseUrl.href;
     allDownloads.append('All downloads and checksums ');

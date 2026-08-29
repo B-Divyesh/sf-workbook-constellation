@@ -3,6 +3,20 @@ import AxeBuilder from '@axe-core/playwright';
 import * as XLSX from 'xlsx';
 import { writeFileSync } from 'node:fs';
 
+function contrast(first: string, second: string) {
+  const luminance = (color: string) => {
+    const values = color.match(/\d+/g)?.map(Number);
+    if (!values || values.length < 3) throw new Error(`Expected an RGB color, received ${color}`);
+    const [red, green, blue] = values.slice(0, 3).map(value => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const [lighter, darker] = [luminance(first), luminance(second)].sort((left, right) => right - left);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 function workbook(sheetCount: number, formula = 'Sheet1!A1') {
   const book = XLSX.utils.book_new();
   for (let index = 1; index <= sheetCount; index += 1) {
@@ -112,7 +126,7 @@ test('@claim:free-sheet-limit keeps eight sheets free and a valid license remove
 test('@claim:license-terms states and applies the $19 one-time Plus terms', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Audit larger workbooks for $19 once' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Buy a $19 license' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/workbook-constellation/checkout');
+  await expect(page.getByRole('link', { name: 'Buy a $19 license (external)' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/workbook-constellation/checkout');
   await expect(page.getByText('HTML handoff reports stay free.')).toBeVisible();
   await page.goto('/terms');
   await expect(page.getByText('Constellation Plus costs $19 as a one-time purchase.')).toBeVisible();
@@ -210,7 +224,7 @@ test('keeps persistent demo actions at least 44px at the 390px viewport', async 
   }
 });
 
-test('keeps every visible mobile control at least 44 CSS pixels tall', async ({ page }) => {
+test('keeps every visible mobile control at least 44 by 44 CSS pixels', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['/', '/demo', '/privacy', '/terms']) {
     await page.goto(path);
@@ -220,8 +234,25 @@ test('keeps every visible mobile control at least 44 CSS pixels tall', async ({ 
         const box = element.getBoundingClientRect();
         return style.visibility !== 'hidden' && style.display !== 'none' && box.width > 1 && box.height > 1;
       })
-      .map(element => ({ text: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, height: element.getBoundingClientRect().height }))
-      .filter(item => item.height < 44));
+      .map(element => ({ text: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }))
+      .filter(item => item.width < 44 || item.height < 44));
     expect(shortControls, `${path} has undersized controls`).toEqual([]);
+  }
+});
+
+test('uses a three-to-one focus ring against light, tan, and dark surfaces', async ({ page }) => {
+  const checks: Array<{ locator: string; surface: string }> = [
+    { locator: '.wordmark', surface: 'rgb(245, 240, 230)' },
+    { locator: '.price .primary', surface: 'rgb(226, 215, 194)' },
+    { locator: '.hero .primary', surface: 'rgb(16, 25, 32)' },
+    { locator: 'footer a[href="/terms"]', surface: 'rgb(9, 15, 19)' }
+  ];
+  await page.goto('/');
+  for (const check of checks) {
+    const control = page.locator(check.locator);
+    await control.focus();
+    await expect(control).toHaveCSS('outline-width', '3px');
+    const color = await control.evaluate(element => getComputedStyle(element).outlineColor);
+    expect(contrast(color, check.surface), `${check.locator} focus contrast`).toBeGreaterThanOrEqual(3);
   }
 });

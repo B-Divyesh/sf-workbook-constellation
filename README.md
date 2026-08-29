@@ -32,7 +32,7 @@ npm run tauri build
 
 Desktop releases are built by `.github/workflows/release.yml`, not on the factory worker. A `v*` tag creates unsigned macOS, Windows, and Linux installers, then publishes `SHA256SUMS` and `latest.json`.
 
-After a release exists, the website offers detected-platform downloads and published checksums. The helper commands verify SHA-256 before keeping an installer:
+After a release exists, the website offers detected-platform downloads and published checksums. The helper commands verify SHA-256 before keeping an installer. On Linux, the shell helper marks the AppImage executable and launches it:
 
 ```sh
 curl -fsSL https://workbook-constellation.sociobot.in/install.sh | sh

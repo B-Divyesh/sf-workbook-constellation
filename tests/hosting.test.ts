@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const root = new URL('../', import.meta.url);
 
@@ -29,6 +32,33 @@ describe('static deployment policy', () => {
     expect(shell).toContain('[ "$expected" = "$actual" ]');
     expect(powershell).toContain('Get-FileHash');
     expect(powershell).toContain('Remove-Item $target');
+  });
+
+  it('makes a verified Linux AppImage executable and launches it (installer regression)', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-installer-'));
+    const bin = join(directory, 'bin');
+    const marker = join(directory, 'launched');
+    const appName = 'Workbook.Constellation_0.1.2_amd64.AppImage';
+    mkdirSync(bin);
+    const curl = join(bin, 'curl');
+    const checksum = join(bin, 'sha256sum');
+    writeFileSync(curl, ['#!/bin/sh', 'output=""', 'last=""', 'while [ "$#" -gt 0 ]; do', '  if [ "$1" = "-o" ]; then output="$2"; shift 2; continue; fi', '  last="$1"; shift', 'done', 'case "$last" in', `  *api.github.com*) printf '{"browser_download_url": "https://downloads.example/${appName}"}\\n' ;;`, '  *AppImage) printf \'#!/bin/sh\\nprintf launched > "$WC_LAUNCH_MARKER"\\n\' > "$output" ;;', `  *SHA256SUMS) printf 'testsum  ${appName}\\n' > "$output" ;;`, 'esac'].join('\n'));
+    writeFileSync(checksum, '#!/bin/sh\nprintf "testsum  %s\\n" "$1"\n');
+    chmodSync(curl, 0o755);
+    chmodSync(checksum, 0o755);
+    try {
+      const output = execFileSync('sh', [new URL('../public/install.sh', import.meta.url).pathname], {
+        cwd: directory,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, WC_LAUNCH_MARKER: marker }
+      });
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(statSync(join(directory, appName)).mode & 0o111).not.toBe(0);
+      expect(readFileSync(marker, 'utf8')).toBe('launched');
+      expect(output).toContain('made Workbook.Constellation_0.1.2_amd64.AppImage executable, and launched');
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('@claim:release-workflow defines every desktop target, checksums, and the release manifest', () => {

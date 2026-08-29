@@ -19,4 +19,10 @@ expected=$(grep " $name$" "$tmpdir/SHA256SUMS" | cut -d' ' -f1)
 actual=$(sha256sum "$tmpdir/$name" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$tmpdir/$name" | cut -d' ' -f1)
 [ "$expected" = "$actual" ] || { echo "Checksum did not match. Nothing was installed."; exit 1; }
 cp "$tmpdir/$name" "$PWD/$name"
-echo "Verified and saved $name in $PWD. Open it to install Workbook Constellation."
+if [ "$os" = "Linux" ]; then
+  chmod +x "$PWD/$name"
+  "$PWD/$name" &
+  echo "Verified, made $name executable, and launched Workbook Constellation."
+else
+  echo "Verified and saved $name in $PWD. Open the disk image to install Workbook Constellation."
+fi

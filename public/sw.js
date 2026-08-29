@@ -22,5 +22,5 @@ self.addEventListener('fetch', event => {
     event.respondWith(fetch(event.request).then(cacheResponse).catch(async () => (await caches.match(event.request)) || (await caches.match('/'))));
     return;
   }
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(cacheResponse).catch(() => caches.match('/'))));
+  event.respondWith(caches.match(event.request, { ignoreVary: true }).then(cached => cached || fetch(event.request).then(cacheResponse).catch(() => caches.match('/', { ignoreVary: true }))));
 });
