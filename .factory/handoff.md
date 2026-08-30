@@ -86,6 +86,11 @@ console errors, title/lang, one h1, main landmark, zero missing image alts, and
 zero unlabeled buttons. Its report and desktop/mobile captures are in
 `.factory/qa-evidence/repair-13-live/`.
 
+Fresh mobile Lighthouse against v0.1.12 scored 93 performance, 100
+accessibility, 100 best practices, and 100 SEO; FCP was 2.072 s, LCP 2.989 s,
+TBT 0 ms, and CLS 0. The full report is
+`.factory/qa-evidence/repair-13-live/lighthouse.json`.
+
 The live Playwright suite passed at desktop and 390 × 844 mobile, including
 keyboard skip-link/demo controls, no horizontal overflow, 44 px controls,
 route focus announcements, privacy request policy, service-worker update and
