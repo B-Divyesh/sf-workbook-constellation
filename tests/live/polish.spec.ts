@@ -8,7 +8,7 @@ test('live picker names XLSX and XLSM and every mobile header keeps all destinat
   await expect(page.locator('.workspace-shell > p').first()).toContainText('Choose an XLSX or XLSM file.');
   await expect(page.locator('label[for="file"]')).toHaveText('Choose an XLSX or XLSM file');
 
-  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/not-a-polish-3-mobile-route']) {
     await page.goto(path);
     const header = page.locator('.site-header');
     for (const name of ['Demo', 'How it works', 'Privacy']) {

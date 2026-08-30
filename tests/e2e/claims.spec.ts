@@ -473,7 +473,7 @@ test('keeps every visible mobile control at least 44 by 44 CSS pixels', async ({
 
 test('keeps Demo, How it works, and Privacy visible in every 390px public-route header', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404.html']) {
     await page.goto(path);
     const header = page.locator('.site-header');
     for (const name of ['Demo', 'How it works', 'Privacy']) {
