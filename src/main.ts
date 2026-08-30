@@ -12,11 +12,15 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 let audit: Audit | null = null;
 let selectedSheet = '';
 let selectedEdge: SheetEdge | null = null;
-let isDemo = false;
+const routeIsDemo = (path = location.pathname, search = location.search) => path === '/demo' || (path === '/' && new URLSearchParams(search).get('demo') === '1');
+let isDemo = routeIsDemo();
 let auditFromDemo = false;
 let licenseNotice = '';
+let licenseVerification: AbortController | null = null;
+const demoEntitlements = { jsonEvidenceExport: true } as const;
 
-captureLicense();
+// Demo mode is resolved before this module may read or write production license keys.
+if (!isDemo) captureLicense();
 
 const icon = `<svg aria-hidden="true" viewBox="0 0 32 32"><path d="M5 24 11 8l7 14 5-17 4 19"/><circle cx="5" cy="24" r="2"/><circle cx="11" cy="8" r="2"/><circle cx="18" cy="22" r="2"/><circle cx="23" cy="5" r="2"/><circle cx="27" cy="24" r="2"/></svg>`;
 
@@ -116,7 +120,7 @@ function auditPage() {
   if (!audit) return landing();
   setMetadata(isDemo ? 'demo' : 'home');
   const details = selectedEdge ? `<p class="path-title"><strong>${text(selectedEdge.from)}</strong> → <strong>${text(selectedEdge.to)}</strong></p>${selectedEdge.formulas.map(f => `<article><code>${text(f.source)}</code><span>feeds</span><code>${text(f.destination)}</code><pre>${text(f.formula)}</pre></article>`).join('')}` : `<p>Select a path to see its source cells and formulas.</p>`;
-  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace formula paths in ${text(audit.fileName)}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} paths between sheets</p>${licenseNotice ? `<p class="license-notice" role="status">${text(licenseNotice)}</p>` : ''}</div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export HTML report</button>${hasPaidLicense() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
+  return shell(`<main id="main"><section class="audit-head"><div><p class="eyebrow">${isDemo ? 'Sample workbook' : 'Local workbook'}</p><h1 tabindex="-1">Trace formula paths in ${text(audit.fileName)}</h1><p>${audit.sheets.length} sheets · ${audit.formulas.length} formulas · ${audit.edges.length} paths between sheets</p>${!isDemo && licenseNotice ? `<p class="license-notice" role="status">${text(licenseNotice)}</p>` : ''}</div><div class="audit-actions"><button data-action="new-file">Open another file</button><button class="primary" data-action="export-html">Export HTML report</button>${hasPaidAccess() ? '<button data-action="export-json">Export JSON evidence</button>' : ''}</div></section>
   <section class="audit-layout"><div class="map-panel"><div class="map-tools"><h2>Sheet map</h2><button data-action="clear-selection">Show all paths</button></div>${graphMarkup(audit)}<p class="graph-help">Tab to a sheet or path. Press Enter to inspect it.</p></div><aside class="proof-panel" aria-labelledby="proof-title"><p class="section-kicker">Exact cells</p><h2 id="proof-title">Path evidence</h2><div id="proof-details">${details}</div></aside></section>
   <section class="warning-panel" aria-labelledby="warning-title"><div><p class="section-kicker">Review before editing</p><h2 id="warning-title">${audit.warnings.length} warning${audit.warnings.length === 1 ? '' : 's'} found</h2></div>${audit.warnings.length ? `<ul>${audit.warnings.map(w => `<li><span class="warning-kind">${text(w.kind)}</span><code>${text(w.sheet)}!${text(w.cell)}</code><span>${text(w.detail)}</span></li>`).join('')}</ul>` : '<p>No external links, circular references, or formulas the app cannot trace were found.</p>'}</section>
   <section class="formula-table" aria-labelledby="formula-title"><h2 id="formula-title">Formula index</h2><div><table><thead><tr><th>Cell</th><th>Formula</th><th>Sources</th></tr></thead><tbody>${audit.formulas.map(f => `<tr><td><code>${text(f.sheet)}!${text(f.cell)}</code></td><td><code>${text(f.formula)}</code></td><td>${f.precedents.map(p => `${text(p.sheet)}!${text(p.ref)}`).join(', ') || 'None found'}</td></tr>`).join('')}</tbody></table></div></section></main>`);
@@ -125,7 +129,7 @@ function auditPage() {
 function legalPage(kind: 'privacy' | 'terms') {
   const privacy = kind === 'privacy';
   setMetadata(kind);
-  const content = privacy ? `<h1 tabindex="-1">Your workbook stays on your device</h1><p>Workbook Constellation reads files in your browser or desktop app. It does not upload workbook contents.</p><h2>What is stored</h2><p>The app stores your license token, its latest verification result, and cached public release details in local storage. Demo data uses memory and is discarded when you leave.</p><h2>Network requests</h2><p>The app contacts Sociobot only when you buy or verify a license. GitHub is contacted only when you check for a newer installer. No workbook content enters either request.</p><h2>Delete local data</h2><p>Clear this site’s browser storage to remove license and release data. Workbooks and reports remain wherever you saved them.</p>` : `<h1 tabindex="-1">Terms for using Workbook Constellation</h1><p>Use the app to inspect workbooks you have permission to access. You remain responsible for reviewing its report before changing financial or operational records.</p><h2>Scope</h2><p>The app reports formula structure. It does not calculate results, execute macros, follow external links, or replace a spreadsheet audit.</p><h2>Purchases</h2><p>Constellation Plus costs $19 as a one-time purchase. Sociobot and Dodo act as merchant of record. Refunds revoke the related license.</p><h2>Warranty</h2><p>The software is provided under the MIT License without warranty. Unsupported or encrypted workbook features may be omitted.</p>`;
+  const content = privacy ? `<h1 tabindex="-1">Your workbook stays on your device</h1><p>Workbook Constellation reads files in your browser or desktop app. It does not upload workbook contents.</p><h2>What is stored</h2><p>The app stores your license token, its latest verification result, and cached public release details in local storage. Demo data uses memory and is discarded when you leave. Demo actions do not read or change saved license data.</p><h2>Network requests</h2><p>The app contacts Sociobot only when you buy or verify a license. GitHub is contacted only when you check for a newer installer. No workbook content enters either request.</p><h2>Delete local data</h2><p>Clear this site’s browser storage to remove license and release data. Workbooks and reports remain wherever you saved them.</p>` : `<h1 tabindex="-1">Terms for using Workbook Constellation</h1><p>Use the app to inspect workbooks you have permission to access. You remain responsible for reviewing its report before changing financial or operational records.</p><h2>Scope</h2><p>The app reports formula structure. It does not calculate results, execute macros, follow external links, or replace a spreadsheet audit.</p><h2>Purchases</h2><p>Constellation Plus costs $19 as a one-time purchase. Sociobot and Dodo act as merchant of record. Refunds revoke the related license.</p><h2>Warranty</h2><p>The software is provided under the MIT License without warranty. Unsupported or encrypted workbook features may be omitted.</p>`;
   return shell(`<main id="main" class="legal">${content}<p><a href="/" data-link>Return to Workbook Constellation</a></p></main>`);
 }
 
@@ -135,7 +139,12 @@ function notFound() {
 }
 
 function render(path = location.pathname, search = location.search) {
-  isDemo = path === '/demo' || (path === '/' && new URLSearchParams(search).get('demo') === '1');
+  const nextIsDemo = routeIsDemo(path, search);
+  if (nextIsDemo && !isDemo) {
+    licenseVerification?.abort();
+    licenseVerification = null;
+  }
+  isDemo = nextIsDemo;
   if (isDemo) { audit = sampleAudit; auditFromDemo = true; }
   else if (auditFromDemo) { audit = null; auditFromDemo = false; }
   app.innerHTML = path === '/' ? (audit ? auditPage() : landing()) : path === '/demo' ? auditPage() : path === '/privacy' ? legalPage('privacy') : path === '/terms' ? legalPage('terms') : notFound();
@@ -161,20 +170,39 @@ function navigate(destination: string) {
 }
 
 async function handleFile(file: File) {
+  if (isDemo) return;
   const status = document.querySelector('#file-status');
   if (!/\.xls[xm]$/i.test(file.name)) { if (status) status.textContent = 'That file is not an XLSX or XLSM workbook. Choose another file.'; return; }
   if (file.size > 50 * 1024 * 1024) { if (status) status.textContent = 'That workbook is larger than 50 MB. Save a smaller copy and try again.'; return; }
   if (status) status.textContent = 'Reading formulas…';
   try {
     const result = auditWorkbook(await file.arrayBuffer(), file.name);
+    if (isDemo) return;
     if (!result.formulas.length) { if (status) status.textContent = 'No formulas were found. Choose a workbook that contains formulas.'; return; }
-    if (result.sheets.length > 8 && !hasPaidLicense()) { if (status) status.textContent = `This workbook has ${result.sheets.length} sheets. A $19 Plus license is needed above 8 sheets.`; return; }
+    if (result.sheets.length > 8 && !hasPaidAccess()) { if (status) status.textContent = `This workbook has ${result.sheets.length} sheets. A $19 Plus license is needed above 8 sheets.`; return; }
     audit = result; render('/');
   } catch (error) {
     if (status) status.textContent = error instanceof Error && error.message === 'Encrypted workbooks are not supported'
       ? 'This workbook is encrypted. Save an unencrypted copy and try again.'
       : 'The workbook could not be read. It may be damaged or use an unsupported format.';
   }
+}
+
+function hasPaidAccess() {
+  return isDemo ? demoEntitlements.jsonEvidenceExport : hasPaidLicense();
+}
+
+async function checkRealLicense() {
+  if (isDemo) return false;
+  licenseVerification?.abort();
+  const controller = new AbortController();
+  licenseVerification = controller;
+  const valid = await verifyLicense({
+    signal: controller.signal,
+    canPersist: () => !isDemo && licenseVerification === controller
+  });
+  if (licenseVerification === controller) licenseVerification = null;
+  return valid;
 }
 
 function bind() {
@@ -186,7 +214,7 @@ function bind() {
     if (action === 'leave-demo') { audit = null; navigate('/'); }
     if (action === 'new-file') { audit = null; navigate('/'); setTimeout(() => document.querySelector<HTMLElement>('[for="file"]')?.focus(), 0); }
     if (action === 'export-html' && audit) downloadReport(audit);
-    if (action === 'export-json' && audit && hasPaidLicense()) downloadJson(audit);
+    if (action === 'export-json' && audit && hasPaidAccess()) downloadJson(audit);
     if (action === 'clear-selection') { selectedSheet = ''; selectedEdge = null; render(location.pathname); document.querySelector<HTMLElement>('[data-action="clear-selection"]')?.focus(); }
   }));
   document.querySelector<HTMLInputElement>('#file')?.addEventListener('change', e => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) handleFile(file); });
@@ -209,13 +237,26 @@ function bind() {
     document.querySelector<HTMLButtonElement>(`[data-edge="${edgeIndex}"]`)?.focus({ preventScroll: true });
     document.querySelector('#proof-title')?.scrollIntoView({ block: 'nearest' });
   }));
-  document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', async e => { e.preventDefault(); const field = new FormData(e.currentTarget as HTMLFormElement).get('license')?.toString() || ''; const status = document.querySelector('#license-status')!; saveLicense(field); status.textContent = 'Checking this license…'; status.textContent = await verifyLicense() ? 'License verified. Larger workbooks are ready.' : 'This license is not active. Check the token and try again.'; });
+  document.querySelector<HTMLFormElement>('#license-form')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (isDemo) return;
+    const field = new FormData(e.currentTarget as HTMLFormElement).get('license')?.toString() || '';
+    const status = document.querySelector('#license-status')!;
+    saveLicense(field);
+    status.textContent = 'Checking this license…';
+    const valid = await checkRealLicense();
+    if (!isDemo && status.isConnected) {
+      licenseNotice = valid ? '' : 'This license is no longer active. HTML reports remain available.';
+      status.textContent = valid ? 'License verified. Larger workbooks are ready.' : 'This license is not active. Check the token and try again.';
+    }
+  });
 }
 
 addEventListener('popstate', () => { render(); focusRouteHeading(); });
-void verifyLicense().then(valid => {
-  if (!valid && hasSavedLicense()) licenseNotice = 'This license is no longer active. HTML reports remain available.';
+render();
+if (!isDemo) void checkRealLicense().then(valid => {
+  if (isDemo) return;
+  licenseNotice = !valid && hasSavedLicense() ? 'This license is no longer active. HTML reports remain available.' : '';
   if (audit) render();
 });
-render();
 if ('serviceWorker' in navigator && !('__TAURI_INTERNALS__' in window)) addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));

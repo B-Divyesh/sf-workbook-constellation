@@ -101,6 +101,73 @@ test('@claim:no-account opens the complete sample without sign-in or setup', asy
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('demo:')))).toEqual([]);
 });
 
+test('@claim:demo-isolation keeps production license data untouched and makes no off-origin request', async ({ browser }) => {
+  const productionToken = '  real-token/+?=unchanged  ';
+  const productionVerdict = '{ "valid": true, "checkedAt": 1, "note": "byte-identical" }';
+  for (const entry of ['/demo?license=demo-query-token', '/?demo=1&license=demo-query-token']) {
+    const context = await browser.newContext({ acceptDownloads: true });
+    await context.addInitScript(({ token, verdict }) => {
+      const tokenKey = 'sb_license:workbook-constellation';
+      const verdictKey = `${tokenKey}:verdict`;
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem(verdictKey, verdict);
+      const originalGet = Storage.prototype.getItem;
+      const originalSet = Storage.prototype.setItem;
+      const originalRemove = Storage.prototype.removeItem;
+      const reads: string[] = [];
+      const writes: string[] = [];
+      Storage.prototype.getItem = function (key: string) {
+        if (key === tokenKey || key === verdictKey) reads.push(key);
+        return originalGet.call(this, key);
+      };
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === tokenKey || key === verdictKey) writes.push(`set:${key}`);
+        return originalSet.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key: string) {
+        if (key === tokenKey || key === verdictKey) writes.push(`remove:${key}`);
+        return originalRemove.call(this, key);
+      };
+      Object.defineProperty(window, '__demoLicenseAudit', {
+        value: {
+          reads,
+          writes,
+          snapshot: () => ({
+            token: originalGet.call(localStorage, tokenKey),
+            verdict: originalGet.call(localStorage, verdictKey)
+          })
+        }
+      });
+    }, { token: productionToken, verdict: productionVerdict });
+    const page = await context.newPage();
+    const offOrigin: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).origin !== 'http://127.0.0.1:4173') offOrigin.push(request.url());
+    });
+    await page.route('https://**/*', route => route.abort());
+    await page.goto(entry);
+    await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Export JSON evidence' })).toBeVisible();
+    await page.locator('[data-sheet="Checks"]').click();
+    await page.getByRole('button', { name: 'Reset demo' }).click();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export HTML report' }).click();
+    expect((await downloadPromise).suggestedFilename()).toBe('Northstar-2026-plan-handoff.html');
+    const jsonDownloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export JSON evidence' }).click();
+    expect((await jsonDownloadPromise).suggestedFilename()).toBe('Northstar-2026-plan-evidence.json');
+    await page.getByRole('button', { name: 'Start for real' }).click();
+    await expect(page).toHaveURL('http://127.0.0.1:4173/');
+    const audit = await page.evaluate(() => {
+      const value = (window as unknown as { __demoLicenseAudit: { reads: string[]; writes: string[]; snapshot: () => { token: string | null; verdict: string | null } } }).__demoLicenseAudit;
+      return { reads: value.reads, writes: value.writes, snapshot: value.snapshot() };
+    });
+    expect(audit).toEqual({ reads: [], writes: [], snapshot: { token: productionToken, verdict: productionVerdict } });
+    expect(offOrigin).toEqual([]);
+    await context.close();
+  }
+});
+
 test('@claim:html-export exports an HTML report that opens without the app', async ({ page, context }) => {
   await page.goto('/demo');
   const downloadPromise = page.waitForEvent('download');
@@ -173,11 +240,16 @@ test('does not show false sources or cycles for scientific notation and function
 
 test('@claim:json-export gives licensed users machine-readable evidence', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: Date.now() })));
-  await page.goto('/demo');
+  await page.goto('/');
+  await page.setInputFiles('#file', {
+    name: 'licensed-evidence.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: referenceWorkbook('Inputs!A1')
+  });
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export JSON evidence' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('Northstar-2026-plan-evidence.json');
+  expect(download.suggestedFilename()).toBe('licensed-evidence-evidence.json');
 });
 
 test('strips XLSM from HTML and JSON export base names', async ({ page }) => {
@@ -287,7 +359,7 @@ test('@claim:license-terms applies the complete Plus entitlement while keeping H
   expect((await htmlPromise).suggestedFilename()).toBe('Northstar-2026-plan-handoff.html');
 });
 
-test('@claim:refund-revocation removes paid features after a revoked verification', async ({ page }) => {
+test('@claim:refund-revocation removes paid features from a real-mode workbook after a revoked verification', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('sb_license:workbook-constellation', 'refunded-token');
     localStorage.setItem('sb_license:workbook-constellation:verdict', JSON.stringify({ valid: true, checkedAt: 0 }));
@@ -297,7 +369,13 @@ test('@claim:refund-revocation removes paid features after a revoked verificatio
     verificationUrl = route.request().url();
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: false, reason: 'revoked', expires_at: null }) });
   });
-  await page.goto('/demo');
+  await page.goto('/');
+  await expect.poll(() => verificationUrl).toContain('license=refunded-token');
+  await page.setInputFiles('#file', {
+    name: 'revoked-license-fixture.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: referenceWorkbook('Inputs!A1')
+  });
   await expect(page.getByRole('status').filter({ hasText: 'license is no longer active' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Export JSON evidence' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Export HTML report' })).toBeVisible();

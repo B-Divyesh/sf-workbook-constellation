@@ -28,22 +28,29 @@ export function hasSavedLicense() {
   return Boolean(localStorage.getItem(key));
 }
 
-export async function verifyLicense() {
+type VerificationOptions = {
+  signal?: AbortSignal;
+  canPersist?: () => boolean;
+};
+
+export async function verifyLicense(options: VerificationOptions = {}) {
   const token = localStorage.getItem(key);
   if (!token) return false;
   const cached = localStorage.getItem(verdictKey);
+  let cachedValid = false;
   if (cached) {
     try {
       const value = JSON.parse(cached);
+      cachedValid = value.valid === true;
       if (Date.now() - value.checkedAt < 86400000) return value.valid === true;
     } catch { /* recheck */ }
   }
   try {
-    const response = await fetch(`https://api.sociobot.in/api/v1/products/${slug}/verify?license=${encodeURIComponent(token)}`);
+    const response = await fetch(`https://api.sociobot.in/api/v1/products/${slug}/verify?license=${encodeURIComponent(token)}`, { signal: options.signal });
     const result = await response.json();
-    localStorage.setItem(verdictKey, JSON.stringify({ valid: result.valid === true, checkedAt: Date.now() }));
+    if (options.canPersist?.() ?? true) localStorage.setItem(verdictKey, JSON.stringify({ valid: result.valid === true, checkedAt: Date.now() }));
     return result.valid === true;
   } catch {
-    return hasPaidLicense();
+    return cachedValid;
   }
 }

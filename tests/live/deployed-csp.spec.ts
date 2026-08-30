@@ -14,7 +14,7 @@ test('deployed CSP permits release checks and cold load has no console errors', 
   const documentResponse = await page.goto('/', { waitUntil: 'networkidle' });
 
   expect(documentResponse?.headers()['content-security-policy']).toBe(expectedCsp);
-  await expect(page.locator('#download-action a.primary')).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.12\//);
+  await expect(page.locator('#download-action a.primary')).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.13\//);
   await expect(page.getByRole('button', { name: 'Check for a newer release' })).toBeVisible();
 
   for (const path of ['/demo', '/privacy', '/terms']) {

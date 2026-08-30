@@ -32,20 +32,73 @@ test('live mobile first screen contains the job, audience, action, and three fac
   }
 });
 
-test('live sample enters through query URL and remains isolated through reset and exit', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('real:sentinel', 'unchanged'));
-  await page.route('https://api.github.com/**', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }));
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Try it with sample data' }).click();
-  await expect(page).toHaveURL(/\?demo=1$/);
-  await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
-  await expect(page.getByText('8 sheets · 7 formulas · 9 paths between sheets')).toBeVisible();
-  await page.locator('[data-sheet="Checks"]').click();
-  await page.getByRole('button', { name: 'Reset demo' }).click();
-  await expect(page.locator('[data-sheet="Checks"]')).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Start for real' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('real:sentinel'))).toBe('unchanged');
-  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('demo:')))).toEqual([]);
+test('live demo entry points never access production license state or contact another origin', async ({ browser }) => {
+  const siteOrigin = new URL(process.env.LIVE_URL || 'https://workbook-constellation.sociobot.in').origin;
+  const productionToken = '  live-real-token/+?=unchanged  ';
+  const productionVerdict = '{ "valid": true, "checkedAt": 1, "live": "byte-identical" }';
+  for (const entry of ['/demo?license=demo-query-token', '/?demo=1&license=demo-query-token']) {
+    const context = await browser.newContext({ acceptDownloads: true });
+    await context.addInitScript(({ token, verdict }) => {
+      const tokenKey = 'sb_license:workbook-constellation';
+      const verdictKey = `${tokenKey}:verdict`;
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem(verdictKey, verdict);
+      const originalGet = Storage.prototype.getItem;
+      const originalSet = Storage.prototype.setItem;
+      const originalRemove = Storage.prototype.removeItem;
+      const reads: string[] = [];
+      const writes: string[] = [];
+      Storage.prototype.getItem = function (key: string) {
+        if (key === tokenKey || key === verdictKey) reads.push(key);
+        return originalGet.call(this, key);
+      };
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === tokenKey || key === verdictKey) writes.push(`set:${key}`);
+        return originalSet.call(this, key, value);
+      };
+      Storage.prototype.removeItem = function (key: string) {
+        if (key === tokenKey || key === verdictKey) writes.push(`remove:${key}`);
+        return originalRemove.call(this, key);
+      };
+      Object.defineProperty(window, '__demoLicenseAudit', {
+        value: {
+          reads,
+          writes,
+          snapshot: () => ({
+            token: originalGet.call(localStorage, tokenKey),
+            verdict: originalGet.call(localStorage, verdictKey)
+          })
+        }
+      });
+    }, { token: productionToken, verdict: productionVerdict });
+    const page = await context.newPage();
+    const offOrigin: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).origin !== siteOrigin) offOrigin.push(request.url());
+    });
+    await page.route('https://api.sociobot.in/**', route => route.abort());
+    await page.route('https://api.github.com/**', route => route.abort());
+    await page.goto(entry);
+    await expect(page.getByText('Demo — sample data, nothing is saved')).toBeVisible();
+    await expect(page.getByText('8 sheets · 7 formulas · 9 paths between sheets')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Export JSON evidence' })).toBeVisible();
+    await page.locator('[data-sheet="Checks"]').click();
+    await page.getByRole('button', { name: 'Reset demo' }).click();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export HTML report' }).click();
+    await downloadPromise;
+    const jsonDownloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export JSON evidence' }).click();
+    await jsonDownloadPromise;
+    await page.getByRole('button', { name: 'Start for real' }).click();
+    const audit = await page.evaluate(() => {
+      const value = (window as unknown as { __demoLicenseAudit: { reads: string[]; writes: string[]; snapshot: () => { token: string | null; verdict: string | null } } }).__demoLicenseAudit;
+      return { reads: value.reads, writes: value.writes, snapshot: value.snapshot() };
+    });
+    expect(audit).toEqual({ reads: [], writes: [], snapshot: { token: productionToken, verdict: productionVerdict } });
+    expect(offOrigin).toEqual([]);
+    await context.close();
+  }
 });
 
 test('live routes expose their own metadata and the real 404 keeps the full shell', async ({ page }) => {

@@ -21,6 +21,13 @@
     "sandbox": "fresh browser context at /demo; assert the populated audit and absence of authentication state"
   },
   {
+    "id": "demo-isolation",
+    "claim": "Demo — sample data, nothing is saved",
+    "where": "persistent demo banner, privacy page, README, and demo documentation",
+    "test": "npm run test:e2e -- --grep @claim:demo-isolation",
+    "sandbox": "separate fresh contexts for /demo and /?demo=1; instrument reads and writes, seed both production license keys with byte-sensitive values, select, reset, export, and exit; assert no key access, unchanged bytes, and zero off-origin requests"
+  },
+  {
     "id": "html-export",
     "claim": "Exports an HTML report that opens without Workbook Constellation or a network connection.",
     "where": "How it works, audit toolbar, and README",
@@ -53,7 +60,7 @@
     "claim": "A valid Plus license adds JSON evidence export.",
     "where": "paid tier, audit toolbar, and README",
     "test": "npm run test:e2e -- --grep @claim:json-export",
-    "sandbox": "sample data with a cached valid test verdict; assert the JSON download"
+    "sandbox": "real-mode generated workbook with a cached valid test verdict; assert the JSON download"
   },
   {
     "id": "license-terms",
@@ -74,7 +81,7 @@
     "claim": "A refunded purchase revokes its license and removes paid features while free HTML reports remain available.",
     "where": "terms",
     "test": "npm run test:e2e -- --grep @claim:refund-revocation",
-    "sandbox": "sample audit with a stale valid verdict; mock a revoked Sociobot verification and assert JSON export is removed while HTML export remains"
+    "sandbox": "real-mode generated workbook with a stale valid verdict; mock a revoked Sociobot verification and assert JSON export is removed while HTML export remains"
   },
   {
     "id": "free-sheet-limit",

@@ -8,7 +8,7 @@ The free tier reads workbooks with up to eight sheets and exports HTML reports. 
 
 ## Try the demo
 
-Open `/?demo=1` or visit <https://workbook-constellation.sociobot.in/?demo=1>. The bundled Northstar planning workbook shows eight sheets, seven formulas, nine paths, and two warning types. Select a path to see its exact source cell, destination cell, and formula. No account or file is needed. The demo reopens offline after the first visit.
+Open `/?demo=1` or visit <https://workbook-constellation.sociobot.in/?demo=1>. The bundled Northstar planning workbook shows eight sheets, seven formulas, nine paths, and two warning types. Select a path to see its exact source cell, destination cell, and formula. No account or file is needed. Demo actions do not read or change saved license data. The demo reopens offline after the first visit.
 
 ## Run and verify
 
