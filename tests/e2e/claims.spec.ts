@@ -521,6 +521,12 @@ test('shows file focus and preserves focused selected graph controls', async ({ 
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: /Forecast to Dashboard/ })).toBeFocused();
   await expect(page.getByRole('button', { name: /Forecast to Dashboard/ })).toHaveAttribute('aria-pressed', 'true');
+
+  const formulaTable = page.locator('.table-scroll');
+  await expect(formulaTable).toHaveAttribute('role', 'region');
+  await expect(formulaTable).toHaveAccessibleName('Formula index');
+  await formulaTable.focus();
+  await expect(formulaTable).toBeFocused();
 });
 
 test('keeps persistent demo actions at least 44px at the 390px viewport', async ({ page }) => {

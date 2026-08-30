@@ -59,7 +59,7 @@ Audited 2026-08-30. Counts treat hyphenated terms and numerals as one word. No l
 | Check for a newer release | 5 | pass |
 | Checking GitHub for a newer release… | 6 | pass — requested loading state |
 | Release details are current. | 4 | pass — success state |
-| GitHub is unavailable. Showing v0.1.13. | 5 | pass — recovery state |
+| GitHub is unavailable. Showing v0.1.14. | 5 | pass — recovery state |
 | Audit larger workbooks for $19 once | 6 | pass |
 | One license accepts workbooks above 8 sheets and adds JSON evidence export. | 12 | pass |
 | HTML reports stay free. | 4 | pass |

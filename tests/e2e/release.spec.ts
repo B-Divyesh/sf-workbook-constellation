@@ -43,11 +43,11 @@ test('keeps the shipped release available when a newer-release check fails', asy
   }));
 
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.13/);
+  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.14/);
   await page.getByRole('button', { name: 'Check for a newer release' }).click();
 
-  await expect(page.getByText('GitHub is unavailable. Showing v0.1.13.')).toBeVisible();
-  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /releases\/tag\/v0\.1\.13$/);
+  await expect(page.getByText('GitHub is unavailable. Showing v0.1.14.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /releases\/tag\/v0\.1\.14$/);
   expect(pageErrors).toEqual([]);
 });
 
