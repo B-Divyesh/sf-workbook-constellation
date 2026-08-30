@@ -1,34 +1,58 @@
-# Workbook Constellation — repair 8 handoff
+# Workbook Constellation — independent verification 11 handoff
 
 ## Status
 
-**PASS.** Release `v0.1.11` repairs every blocking finding in independent
-verification 10 (`6366531`, candidate `997562d`) and targets repair commit
-`97be5bbe87ef7702b26a834bae6afb8c6db8afb0`. The desktop app remains a Tauri 2
-application and the website remains a static deployment.
+**PASS.** Candidate `f4da77286117cf52498df5a589c97105b86fab46` was
+independently verified on 2026-08-30 against
+<https://workbook-constellation.sociobot.in>. No release defect remains.
 
-## Repairs
+The deployment-only blocker from verification 10 is resolved. Desktop release
+`v0.1.11` targets `97be5bbe87ef7702b26a834bae6afb8c6db8afb0`; the candidate
+adds only QA metadata, recorded public-release fixtures, and tests after that
+tag. Shipped product and build inputs are unchanged. Fresh candidate
+`index.html`, JS, CSS, and `sw.js` hashes exactly match production.
 
-- Bumped the package, Cargo, Tauri, web footer, static 404, and shipped download
-  fallback from `0.1.9` to `0.1.11`. Web version text and asset names now derive
-  from `package.json` during the Vite build.
-- Added `scripts/verify-release.mjs`. Every release job checks out the requested
-  tag and rejects a missing tag, version mismatch, or tag that does not point at
-  the packaged commit. This closes the stale-installer path from verification 10.
-- Reproduced the Linux AppImage failure after installing the workflow's former
-  dependency list. Tauri's GTK plugin recursively invoked its `linuxdeploy`
-  AppImage without extraction mode, which exited 127 because the QA container
-  has no FUSE 2 mount support.
-- Added a cross-platform Tauri launcher that sets
-  `APPIMAGE_EXTRACT_AND_RUN=1` on Linux. The workflow also sets this variable and
-  installs the `file` command required by `linuxdeploy`.
-- Added regression tests that execute the launcher through a fake Tauri CLI and
-  create a temporary Git repository to prove a post-tag candidate is rejected.
-  The release claim also checks the synchronized versions and workflow guards.
+Full evidence and exact observed values are in
+`.factory/verification-11.md`; screenshots and Lighthouse output are in
+`.factory/qa-artifacts/`.
 
-## Local verification
+## Verification summary
 
-Run from a clean checkout:
+- All 24 commands in `.factory/claims.json`: PASS, run separately in manifest
+  order from the clean candidate.
+- First-read and one-click sample gate: PASS on desktop and 390 px mobile.
+- `npm ci`: PASS; 60 packages. `npm audit --audit-level=high`: 0
+  vulnerabilities.
+- `npm test`: PASS; 32 unit/integration and 34 browser tests.
+- `npm run test:live`: PASS; 10/10 against production.
+- `npm run build`, `npm run build:app`, and `npx tsc --noEmit`: PASS. No lint
+  script exists.
+- `cargo test --locked --manifest-path src-tauri/Cargo.toml`: PASS after
+  installing the workflow's declared Linux prerequisites.
+- Exact `CI=true npm run tauri build`: PASS; AppImage, DEB, and RPM produced.
+- Manual production flow: PASS for sample evidence, HTML export, a generated
+  three-sheet workbook, wrong type, malformed, over-50-MiB, and encrypted
+  input recovery.
+- Privacy: sample/select/export made only 7 same-origin requests. GitHub and
+  Sociobot were contacted only by explicit actions, with no workbook data.
+- Offline: service-worker-controlled `/demo` reloaded with the full sample.
+- Sociobot rate limit: 30 requests allowed; request 31 returned 429 with
+  `Retry-After: 3`.
+- Accessibility: zero Axe serious/critical findings across all public routes
+  at 390 and 1440 px; keyboard, visible focus, 44 px targets, reduced motion,
+  and 200% text zoom passed.
+- Mobile Lighthouse: 99 performance, 100 accessibility, 100 best practices,
+  100 SEO; LCP 1.8 s, TBT 70 ms, CLS 0.
+- JS is 126,238 bytes gzip, CSS 3,726 bytes gzip, and the mobile hero is
+  31,950 bytes.
+- GitHub workflow run `33281674234`: success for Linux, Windows, Intel macOS,
+  Apple silicon macOS, and manifest jobs.
+- Fresh published DEB checksum:
+  `9ed44d900e1413e6f1639d53f2c89e0e48742b34039c26aed6afc1f05ee59e5d`,
+  matching `SHA256SUMS`. A clean extracted native smoke launch rendered the
+  app and stayed open for the test window.
+
+## Run again
 
 ```sh
 npm ci
@@ -39,62 +63,17 @@ npm run build:app
 npx tsc --noEmit
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 CI=true npm run tauri build
+npm run test:live
 ```
 
-Evidence on Ubuntu 24.04:
+The native commands require the Linux packages listed in
+`.github/workflows/release.yml`.
 
-- `npm ci`: 60 packages; `npm audit`: 0 vulnerabilities.
-- `npm test`: 32 unit/integration tests and 34 Playwright tests passed. This
-  covers 23 local claims, every public route through Axe, desktop and 390px
-  layout, keyboard/focus, privacy request logs, offline reload, service-worker
-  update behavior, input recovery, export, licensing, and download behavior.
-  The live checkout test covers the remaining claim, so all 24 passed.
-- Site and desktop frontend builds passed TypeScript checking. Production JS is
-  126,239 bytes gzip; CSS is 3,726 bytes gzip.
-- `cargo test --locked` passed. The exact native command completed and produced
-  `Workbook Constellation_0.1.11_amd64.deb`,
-  `Workbook Constellation-0.1.11-1.x86_64.rpm`, and
-  `Workbook Constellation_0.1.11_amd64.AppImage`.
-- `/opt/fleet/lib/verify-url.sh` reported HTTP 200 in 626 ms, one `h1`,
-  `lang=en`, a main landmark, no missing alt text, no unlabeled buttons, and no
-  console errors.
-- Production-mode mobile Lighthouse: performance 98, accessibility 100, best
-  practices 100, SEO 100; LCP 2.2 s, CLS 0, total blocking time 0 ms.
-- Evidence is in `.factory/qa-artifacts/repair-8/`.
+## Known limitations and operator action
 
-## Release and deployment
-
-Tag `v0.1.11` resolves to `97be5bb`. GitHub Actions run
-[`33281674234`](https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33281674234)
-passed all five jobs: Linux, Windows, Intel macOS, Apple silicon macOS, and the
-manifest job. The release contains AppImage, DEB, RPM, MSI, EXE, both DMGs, both
-app archives, `SHA256SUMS`, and valid `latest.json` metadata for `v0.1.11`.
-
-A fresh published DEB download matched its checksum:
-
-```text
-9ed44d900e1413e6f1639d53f2c89e0e48742b34039c26aed6afc1f05ee59e5d
-Package: workbook-constellation
-Version: 0.1.11
-Architecture: amd64
-```
-
-`/opt/fleet/lib/deploy-static.sh workbook-constellation dist/site` completed as
-deployment `ddec1310-1be6-4817-8661-2e430bb5fa65`. The custom domain returns
-HTTPS 200. Live `index.html`, JS, CSS, and `sw.js` SHA-256 values exactly match
-the local production build. All 10 live Playwright checks passed, including
-desktop/390px Axe checks, keyboard, routes, headers, demo isolation, release
-links, candidate identity, and the live Sociobot/Dodo checkout.
-
-The incomplete intermediate `v0.1.10` release and tag were removed after the
-failed run was diagnosed. The post-release handoff commit changes only QA
-evidence, claim metadata, and regression fixtures; shipped product sources and
-the deployed build remain byte-identical to `v0.1.11`.
-
-## Known gaps and operator action
-
-- Installer signing is unchanged: macOS and Windows packages are unsigned.
-  Signing requires operator-owned `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`
-  credentials. The product clearly labels the builds as unsigned.
-- The app does not check for native updates, so it intentionally ships no Tauri
-  updater manifest.
+- macOS and Windows installers are unsigned, clearly disclosed on the site.
+  Signing needs operator-owned `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`
+  credentials.
+- The app intentionally has no native updater or updater manifest.
+- Documented parser limits remain: some table/named/locale formulas,
+  references built from text, and encrypted workbooks.
