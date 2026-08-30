@@ -1,52 +1,96 @@
-# Workbook Constellation — verification 12 handoff
+# Workbook Constellation — repair 9 handoff
 
 ## Status
 
-**FAIL — the downloadable desktop release is not the candidate build.**
+**PASS — VC-12-01 is repaired.** The current desktop release is
+[`v0.1.12`](https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.12), not v0.1.11. It targets repair commit
+`7d3b88b56c457ab7acef3385a0d5020b2087eb37`, and the live site now serves its
+matching `0.1.12` download metadata.
 
-Candidate `621817a2a435363435b006f52c8c37bade5da74b` was verified at
-<https://workbook-constellation.sociobot.in> on 2026-08-30 UTC. The live web
-assets match that commit byte-for-byte, but the page links desktop release
-v0.1.11 built from older commit `97be5bbe87ef7702b26a834bae6afb8c6db8afb0`.
+The accepted candidate was `621817a2a435363435b006f52c8c37bade5da74b`.
+Publishing a new version requires synchronized version metadata, so the release
+tag contains that required 0.1.12 metadata plus provenance tests/workflow
+changes. `git diff 621817a..7d3b88b -- src` is empty: no renderer, parser, or
+user-facing workbook behavior changed from the accepted candidate.
 
-The drift includes user-facing `src/main.ts` and `src/style.css` changes. At
-390 px, the published desktop app shows only Privacy in its header while the
-candidate shows Demo, How it works, and Privacy. See
-`.factory/qa-evidence/published-deb-390.png` and
-`.factory/qa-evidence/live-home-390.png`.
+## Defect reproduction and repair
+
+- Reproduced the exact failure before changing code: GitHub release `v0.1.11`
+  reported target `97be5bbe87ef7702b26a834bae6afb8c6db8afb0`, not accepted
+  candidate `621817a2a435363435b006f52c8c37bade5da74b`.
+- Added `scripts/verify-published-release.mjs`. It rejects a target-commit
+  mismatch before downloads, requires all Linux/Windows/macOS assets, checks
+  every installer against `SHA256SUMS`, and confirms `latest.json` has the same
+  exact asset URLs.
+- Added an exact VC-12-01 regression in `tests/hosting.test.ts`: the old
+  target commit is passed as v0.1.12 metadata and must fail with the candidate
+  mismatch. A second regression proves all nine required assets, checksums, and
+  manifest URLs pass together.
+- Bumped every release version source to 0.1.12: package and lock files,
+  Cargo manifest/lock, Tauri config, static 404 footer, fallback download UI,
+  and live-release expectations.
+- The release workflow now has a `verify-published-release` job after the
+  manifest job. It checks the tag commit, the nine published installer bytes,
+  `SHA256SUMS`, and the GitHub CORS-safe metadata before succeeding.
+
+## Release and live deployment evidence
+
+- Tag: `v0.1.12` → `7d3b88b56c457ab7acef3385a0d5020b2087eb37`.
+- GitHub Actions run
+  [`33296891730`](https://github.com/B-Divyesh/sf-workbook-constellation/actions/runs/33296891730)
+  passed on 2026-08-30 UTC: Linux, Windows, Intel macOS, Apple-silicon macOS,
+  manifest, and the new published-release verifier all succeeded.
+- Independent post-release command:
+
+  ```sh
+  RELEASE_TAG=v0.1.12 \
+  RELEASE_COMMIT=7d3b88b56c457ab7acef3385a0d5020b2087eb37 \
+  node scripts/verify-published-release.mjs
+  ```
+
+  passed with: `Verified 9 v0.1.12 installer assets at
+  7d3b88b56c457ab7acef3385a0d5020b2087eb37.`
+- `latest.json` is valid at the release and enumerates the same nine installer
+  URLs. `SHA256SUMS` covers each of them. The published DEB checksum passed,
+  its metadata is `workbook-constellation 0.1.12 amd64`, and it launched under
+  Xvfb for eight seconds.
+- `dist/site` was deployed to the existing static product application. The
+  live page serves `assets/index-CEK_O54S.js`, contains `0.1.12`, and its
+  hashed module has `Cache-Control: public, max-age=31536000, immutable`.
+- A real browser clicked **Check for a newer release** against GitHub's CORS
+  API without console errors and received the v0.1.12 Linux asset URL.
 
 ## Verification completed
 
-- All 24 exact commands in `.factory/claims.json`: passed separately.
-- `npm test`: 32 unit/integration and 36 browser tests passed.
-- `npm run test:live`: 11 production tests passed.
-- `npm run build`, `npm run build:app`, and `npx tsc --noEmit`: passed.
-- `npm audit --audit-level=low`: 0 vulnerabilities.
-- `cargo test --locked`: passed with the workflow’s Linux prerequisites.
-- `CI=true npm run tauri build`: produced DEB, RPM, and AppImage.
-- The published DEB checksum matched and the installed binary launched under
-  Xvfb, but it remains an older build.
-- Live manual sample, formula evidence, HTML export, normal workbook, free
-  8/9-sheet boundary, wrong-type, malformed, and encrypted recovery: passed.
-- Privacy request log: workbook/demo flow stayed same-origin; explicit GitHub
-  and Sociobot actions contacted only their documented origins.
-- License endpoint allowance: requests 1–30 returned 200; request 31 returned
-  429 with `Retry-After: 3`.
-- Axe: 0 serious/critical findings across all public routes at desktop and
-  390 px. Keyboard, focus, touch targets, reduced motion, and offline reload
-  passed.
-- Lighthouse mobile: 99 performance, 100 accessibility, 100 best practices,
-  100 SEO; LCP 1.852 s, TBT 49.5 ms, CLS 0.
-- Candidate/live hashes match for HTML, JS, CSS, service worker, and hero art.
+```sh
+npm ci
+npm run test:unit                 # 34 passed
+npx tsc --noEmit
+npm run build:site
+npm run build:app
+npm run test:e2e                  # 36 passed
+# every one of the 24 commands in .factory/claims.json, separately, in order
+cargo test --locked --manifest-path src-tauri/Cargo.toml
+npm run test:live                 # 11 passed against production
+npm audit --audit-level=low       # 0 vulnerabilities
+```
 
-Full evidence and exact hashes are in `.factory/verification-12.md` and
-`.factory/qa-evidence/`.
+The complete claim manifest passed from the clean install: parser and export
+paths, local-only privacy, license boundaries, offline reload/update,
+installation helpers, and release metadata. The native cargo test passed after
+installing only the Linux packages declared in the repository's release
+workflow.
 
-## Required next step
+`verify-url.sh` passed against the deployed root: HTTP 200, 666 ms load, zero
+console errors, title/lang, one h1, main landmark, zero missing image alts, and
+zero unlabeled buttons. Its report and desktop/mobile captures are in
+`.factory/qa-evidence/repair-13-live/`.
 
-Publish a new versioned desktop release from the accepted candidate commit,
-update the live download metadata to that release, and reverify every platform
-asset plus `SHA256SUMS` and `latest.json`. Do not reuse v0.1.11.
+The live Playwright suite passed at desktop and 390 × 844 mobile, including
+keyboard skip-link/demo controls, no horizontal overflow, 44 px controls,
+route focus announcements, privacy request policy, service-worker update and
+offline demo behavior, CSP/cache/404 response policy, CORS-safe GitHub release
+lookup, and Axe serious/critical checks across public routes.
 
 ## Run locally
 
@@ -56,15 +100,14 @@ npm test
 npm run build
 npm run build:app
 cargo test --locked --manifest-path src-tauri/Cargo.toml
-CI=true npm run tauri build
-npm run test:live
 ```
 
-Linux native commands require the packages listed in
-`.github/workflows/release.yml`, including `file`.
+Desktop release packages are built only by `.github/workflows/release.yml` on
+GitHub Actions. Tag a synchronized `v*` version after the local checks pass.
 
-## Other known limitations
+## Known limitations / operator action
 
-macOS and Windows packages are intentionally unsigned. Signing still requires
-the operator-owned Apple and Windows certificates documented by the release
-workflow. No product code was changed during verification.
+macOS and Windows installers remain intentionally unsigned. Production signing
+still needs the operator-owned `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`
+secrets. No workbook contents, analytics, remote fonts, or third-party scripts
+were added.
