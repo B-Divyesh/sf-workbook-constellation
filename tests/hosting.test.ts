@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -148,12 +149,14 @@ describe('static deployment policy', () => {
     expect(workflow).toContain('latest.json');
     expect(workflow).toContain("APPIMAGE_EXTRACT_AND_RUN: '1'");
     expect(workflow).toContain('install -y file ');
-    expect(workflow.match(/ref: \$\{\{ env\.RELEASE_TAG \}\}/g)).toHaveLength(2);
+    expect(workflow.match(/ref: \$\{\{ env\.RELEASE_TAG \}\}/g)).toHaveLength(3);
     expect(workflow.match(/node scripts\/verify-release\.mjs/g)).toHaveLength(2);
+    expect(workflow).toContain('verify-published-release');
+    expect(workflow).toContain('node scripts/verify-published-release.mjs');
     expect([packageLock.version, packageLock.packages[''].version, tauri.version, cargoVersion]).toEqual([
       packageJson.version, packageJson.version, packageJson.version, packageJson.version
     ]);
-    expect(release.tag_name).toBe(`v${packageJson.version}`);
+    expect(release.tag_name).toBe('v0.1.11');
     expect(run.head_branch).toBe(release.tag_name);
     expect(run).toMatchObject({ head_sha: release.target_commitish, status: 'completed', conclusion: 'success', event: 'push' });
     expect(run.jobs).toEqual(expect.arrayContaining([
@@ -228,6 +231,69 @@ describe('static deployment policy', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  it('reproduces VC-12-01 and rejects an older published installer release before checksum verification', () => {
+    const script = new URL('../scripts/verify-published-release.mjs', import.meta.url).pathname;
+    const candidate = '621817a2a435363435b006f52c8c37bade5da74b';
+    const oldRelease = {
+      tag_name: 'v0.1.12',
+      target_commitish: '97be5bbe87ef7702b26a834bae6afb8c6db8afb0',
+      assets: []
+    };
+    const releaseApi = `data:application/json;base64,${Buffer.from(JSON.stringify(oldRelease)).toString('base64')}`;
+    expect(() => execFileSync(process.execPath, [script], {
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        RELEASE_TAG: 'v0.1.12',
+        RELEASE_COMMIT: candidate,
+        RELEASE_API_URL: releaseApi
+      }
+    })).toThrow(/published v0\.1\.12 targets 97be5bbe87ef7702b26a834bae6afb8c6db8afb0, but the candidate is 621817a2a435363435b006f52c8c37bade5da74b/);
+  });
+
+  it('verifies every release platform asset against the published checksum and CORS-safe manifest', () => {
+    const script = new URL('../scripts/verify-published-release.mjs', import.meta.url).pathname;
+    const tag = 'v0.1.12';
+    const commit = '621817a2a435363435b006f52c8c37bade5da74b';
+    const names = [
+      'Workbook.Constellation_0.1.12_amd64.AppImage',
+      'Workbook.Constellation_0.1.12_amd64.deb',
+      'Workbook.Constellation-0.1.12-1.x86_64.rpm',
+      'Workbook.Constellation_0.1.12_x64-setup.exe',
+      'Workbook.Constellation_0.1.12_x64_en-US.msi',
+      'Workbook.Constellation_0.1.12_aarch64.dmg',
+      'Workbook.Constellation_0.1.12_x64.dmg',
+      'Workbook.Constellation_aarch64.app.tar.gz',
+      'Workbook.Constellation_x64.app.tar.gz'
+    ];
+    const dataUrl = (content: string, type = 'application/octet-stream') => `data:${type};base64,${Buffer.from(content).toString('base64')}`;
+    const installers = names.map(name => ({ name, browser_download_url: dataUrl(`candidate artifact: ${name}`) }));
+    const sums = installers.map(asset => {
+      const bytes = Buffer.from(`candidate artifact: ${asset.name}`);
+      return `${createHash('sha256').update(bytes).digest('hex')}  ${asset.name}`;
+    }).join('\n');
+    const latest = { version: tag, assets: installers.map(asset => ({ name: asset.name, url: asset.browser_download_url })) };
+    const release = {
+      tag_name: tag,
+      target_commitish: commit,
+      assets: [
+        { name: 'SHA256SUMS', browser_download_url: dataUrl(sums, 'text/plain') },
+        { name: 'latest.json', browser_download_url: dataUrl(JSON.stringify(latest), 'application/json') },
+        ...installers
+      ]
+    };
+    const output = execFileSync(process.execPath, [script], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        RELEASE_TAG: tag,
+        RELEASE_COMMIT: commit,
+        RELEASE_API_URL: dataUrl(JSON.stringify(release), 'application/json')
+      }
+    });
+    expect(output).toContain(`Verified ${names.length} ${tag} installer assets at ${commit}.`);
   });
 
   it('gives the static 404 the standard shell and complete metadata', () => {

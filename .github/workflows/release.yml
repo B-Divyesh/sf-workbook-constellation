@@ -90,3 +90,18 @@ jobs:
           find . -maxdepth 1 -type f ! -name 'SHA256SUMS' ! -name 'latest.json' -printf '%f\n' | sort | xargs sha256sum > SHA256SUMS
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '{version:.tag_name, assets:[.assets[]|{name:.name,url:.browser_download_url}]}' > latest.json
           gh release upload "${RELEASE_TAG}" SHA256SUMS latest.json --clobber
+
+  verify-published-release:
+    needs: manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - id: candidate
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Verify candidate provenance, every installer checksum, and CORS-safe metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_COMMIT: ${{ steps.candidate.outputs.commit }}
+        run: node scripts/verify-published-release.mjs
