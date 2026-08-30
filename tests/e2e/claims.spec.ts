@@ -65,6 +65,15 @@ test('uses one name for formula paths and literal recovery copy across the landi
   await expect(page.getByRole('link', { name: 'Return to Workbook Constellation' })).toBeVisible();
 });
 
+test('names every accepted workbook format beside the file picker', async ({ page }) => {
+  await page.goto('/');
+  const picker = page.locator('#file');
+  await expect(picker).toHaveAttribute('accept', '.xlsx,.xlsm');
+  await expect(page.locator('.workspace-shell > p').first()).toContainText('Choose an XLSX or XLSM file.');
+  await expect(page.locator('label[for="file"]')).toHaveText('Choose an XLSX or XLSM file');
+  await expect(page.getByText('Choose an XLSX file', { exact: false })).toHaveCount(0);
+});
+
 test('@claim:path-evidence shows the exact cells and formula for a selected path', async ({ page }) => {
   await page.goto('/?demo=1');
   await page.getByRole('button', { name: /Forecast to Dashboard/ }).click();
@@ -459,6 +468,23 @@ test('keeps every visible mobile control at least 44 by 44 CSS pixels', async ({
       .map(element => ({ text: element.textContent?.trim() || element.getAttribute('aria-label') || element.tagName, width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }))
       .filter(item => item.width < 44 || item.height < 44));
     expect(shortControls, `${path} has undersized controls`).toEqual([]);
+  }
+});
+
+test('keeps Demo, How it works, and Privacy visible in every 390px public-route header', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+    await page.goto(path);
+    const header = page.locator('.site-header');
+    for (const name of ['Demo', 'How it works', 'Privacy']) {
+      const link = header.getByRole('link', { name, exact: true });
+      await expect(link, `${name} on ${path}`).toBeVisible();
+      const box = await link.boundingBox();
+      expect(box?.height, `${name} height on ${path}`).toBeGreaterThanOrEqual(44);
+      expect(box?.x, `${name} left edge on ${path}`).toBeGreaterThanOrEqual(0);
+      expect((box?.x || 0) + (box?.width || 0), `${name} right edge on ${path}`).toBeLessThanOrEqual(390);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), `horizontal overflow on ${path}`).toBeLessThanOrEqual(390);
   }
 });
 

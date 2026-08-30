@@ -1,1 +1,1 @@
-Map formula paths between sheets before you edit a workbook.
+Trace formula paths between workbook sheets before you change a cell.

@@ -1,6 +1,23 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+test('live picker names XLSX and XLSM and every mobile header keeps all destinations', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('#file')).toHaveAttribute('accept', '.xlsx,.xlsm');
+  await expect(page.locator('.workspace-shell > p').first()).toContainText('Choose an XLSX or XLSM file.');
+  await expect(page.locator('label[for="file"]')).toHaveText('Choose an XLSX or XLSM file');
+
+  for (const path of ['/', '/demo', '/privacy', '/terms']) {
+    await page.goto(path);
+    const header = page.locator('.site-header');
+    for (const name of ['Demo', 'How it works', 'Privacy']) {
+      await expect(header.getByRole('link', { name, exact: true }), `${name} on ${path}`).toBeVisible();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), `horizontal overflow on ${path}`).toBeLessThanOrEqual(390);
+  }
+});
+
 test('live mobile first screen contains the job, audience, action, and three facts', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/', { waitUntil: 'networkidle' });

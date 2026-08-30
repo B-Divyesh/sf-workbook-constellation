@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-29. Counts treat hyphenated terms and numerals as one word. No line exceeds 22 words or contains a banned marketing word.
+Audited 2026-08-30. Counts treat hyphenated terms and numerals as one word. No line exceeds 22 words or contains a banned marketing word.
 
 | Copy | Words | Result |
 |---|---:|---|
@@ -14,10 +14,10 @@ Audited 2026-08-29. Counts treat hyphenated terms and numerals as one word. No l
 | Free for workbooks up to 8 sheets | 7 | pass |
 | Open a workbook | 3 | pass |
 | Open a workbook in read-only mode | 6 | pass |
-| Choose an XLSX file. | 4 | pass |
+| Choose an XLSX or XLSM file. | 6 | pass |
 | The report reads saved formulas only. | 6 | pass |
 | It never runs macros or opens linked files. | 8 | pass |
-| Choose an XLSX file | 4 | pass |
+| Choose an XLSX or XLSM file | 6 | pass |
 | or drop one here · 50 MB maximum | 8 | pass |
 | Live preview | 2 | pass |
 | Follow each formula to its source | 6 | pass |
