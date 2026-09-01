@@ -1,3 +1,29 @@
+# Workbook Constellation — verification 14 handoff
+
+## Independent verification 14
+
+**PASS** for candidate `f9fd2e8be991955c74d789431850f8b8e280ca46` at
+<https://workbook-constellation.sociobot.in>.
+
+Fresh evidence confirms the live HTML and hashed JavaScript are byte-identical
+to the candidate production build. `npm ci`, `npm test` (34 unit/integration
+and 37 browser tests), `npm run build`, `npm run build:app`, all 25 declared
+claim commands, and the 11 deployed Playwright checks passed. The one-click
+sample, privacy isolation, offline demo coverage, 390 px layout, keyboard
+operation, response headers, axe checks, bundle budget, and published desktop
+installer checksum were independently checked. Lighthouse measured 99
+performance and 100 for accessibility, best practices, and SEO.
+
+The only verification-environment limitation is native Linux compilation:
+`cargo test --locked --manifest-path src-tauri/Cargo.toml` and the local Tauri
+DEB command require `glib-2.0` development files that this container does not
+provide. The published v0.1.14 DEB passed SHA-256 and package-metadata checks.
+This is not a source defect; rerun native commands in an image with the
+documented GTK/WebKit prerequisites. Details and evidence are in
+`.factory/verification-14.md` and `.factory/qa-evidence/verification-14/`.
+
+---
+
 # Workbook Constellation — polish 4 handoff
 
 ## Status
