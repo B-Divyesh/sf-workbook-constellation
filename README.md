@@ -2,7 +2,7 @@
 
 Map workbook formulas before you change a cell.
 
-Workbook Constellation is for people inheriting operational or financial XLSX files. It maps formula paths between sheets and flags paths that need review. You can export the map as an HTML report. It does not calculate cells, edit workbooks, run macros, or open external links.
+Workbook Constellation is for people inheriting operational or financial XLSX or XLSM files. It maps formula paths between sheets and flags paths that need review. You can export the map as an HTML report. It does not calculate cells, edit workbooks, run macros, or open external links.
 
 The free tier reads workbooks with up to eight sheets and exports HTML reports. Constellation Plus costs $19 once, accepts workbooks above eight sheets, and adds JSON evidence export. License checks use Sociobot. They never send workbook contents.
 

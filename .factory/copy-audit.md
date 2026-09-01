@@ -23,7 +23,7 @@ Audited 2026-08-30. Counts treat hyphenated terms and numerals as one word. No l
 | Choose an XLSX or XLSM file | 6 | pass |
 | or drop one here · 50 MB maximum | 8 | pass |
 | Live preview | 2 | pass |
-| Follow each formula to its source | 6 | pass |
+| Preview formula paths between sheets | 5 | pass — section name; bounded by the documented unsupported-formula warnings |
 | Select a sheet or a path. | 6 | pass |
 | The evidence panel lists the exact cells behind it. | 9 | pass |
 | Desktop walkthrough | 2 | pass |
@@ -63,6 +63,7 @@ Audited 2026-08-30. Counts treat hyphenated terms and numerals as one word. No l
 | Audit larger workbooks for $19 once | 6 | pass |
 | One license accepts workbooks above 8 sheets and adds JSON evidence export. | 12 | pass |
 | HTML reports stay free. | 4 | pass |
+| License token | 2 | pass — form label |
 
 ## Terminology
 

@@ -26,4 +26,9 @@ describe('claim manifest', () => {
     const tagged = new Set(testSources.match(/@claim:[a-z0-9-]+/g) || []);
     expect(tagged).toEqual(declared);
   });
+
+  it('keeps both supported workbook formats in the README audience sentence', () => {
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    expect(readme).toContain('Workbook Constellation is for people inheriting operational or financial XLSX or XLSM files.');
+  });
 });

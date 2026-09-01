@@ -57,12 +57,20 @@ test('@claim:sample-map loads a useful eight-sheet dependency map', async ({ pag
 test('uses one name for formula paths and literal recovery copy across the landing routes', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('See a completed map of formula paths between sheets.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Preview formula paths between sheets' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Follow each formula to its source' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Desktop workbook walkthrough' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Map and export a workbook in three steps' })).toBeVisible();
   await expect(page.getByText('Trace formula paths between sheets.')).toBeVisible();
   await page.goto('/not-a-real-page');
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Return to Workbook Constellation' })).toBeVisible();
+});
+
+test('labels the license-token input with the value a customer must enter', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('textbox', { name: 'License token' })).toHaveAttribute('id', 'license');
+  await expect(page.getByRole('button', { name: 'Verify license' })).toBeVisible();
 });
 
 test('names every accepted workbook format beside the file picker', async ({ page }) => {
@@ -420,7 +428,7 @@ test('@claim:runtime-privacy uses only documented services in web and desktop fl
   await webPage.route('https://api.sociobot.in/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"valid":false}' }));
   await webPage.goto('/');
   await webPage.getByRole('button', { name: 'Check for a newer release' }).click();
-  await webPage.getByLabel('Have a license?').fill('privacy-test-token');
+  await webPage.getByLabel('License token').fill('privacy-test-token');
   await webPage.getByRole('button', { name: 'Verify license' }).click();
   await expect(webPage.getByRole('status').last()).toContainText('not active');
   expect(new Set(webRequests.map(url => new URL(url).origin))).toEqual(new Set(['http://127.0.0.1:4173', 'https://api.github.com', 'https://api.sociobot.in']));

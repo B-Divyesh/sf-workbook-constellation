@@ -1,1 +1,1 @@
-Map formula paths between workbook sheets before changing a cell.
+Map formula paths in XLSX and XLSM workbooks before changing a cell.
