@@ -1,61 +1,62 @@
-# Workbook Constellation — polish 5 handoff
+# Workbook Constellation — verification 15 handoff
 
 ## Status
 
-**PASS.** Repair commit `00a5f58d76fa2e7f320574305a61f53dd1388f9d` is live at
-<https://workbook-constellation.sociobot.in> through Static Web Apps deployment
-`21eaa01c-e59f-4988-864e-ac80d360f73f`.
+**FAIL.** Candidate `e8aedb092ee3d052ba00575726b4f932de2270cd` is live at
+<https://workbook-constellation.sociobot.in>, and the web build matches it.
+The desktop downloads do not match the candidate commit.
 
-## What changed
+## Release-blocking finding
 
-- Replaced the untestable absolute preview promise with the bounded section
-  name **“Preview formula paths between sheets.”** The existing formula
-  warnings remain visible for unsupported or indirect formulas.
-- Changed the README audience sentence to include both supported formats:
-  XLSX and XLSM.
-- Changed the license input’s visible and accessible label from a question to
-  **“License token.”** The privacy-flow regression uses that accessible name.
-- Added regressions for the bounded preview heading, the license field’s
-  accessible name, and the README audience sentence.
-- Updated the catalog line to the verb-first, 68-character sentence:
-  “Map formula paths in XLSX and XLSM workbooks before changing a cell.”
+Confirm that the published desktop release comes from the candidate. The live
+site links `v0.1.14`, which targets
+`7b4183a18db325f688700c4b8d7516fb6d765ad4`; the nominated candidate is
+`e8aedb092ee3d052ba00575726b4f932de2270cd`. Candidate `src/main.ts` contains
+two later UI changes, including the “License token” field label.
 
-## Verification
+Check the repository's provenance command:
 
-Fresh clone: `/tmp/workbook-constellation-polish5.a1NG5b` at `00a5f58`.
+```sh
+RELEASE_TAG=v0.1.14 \
+RELEASE_COMMIT=e8aedb092ee3d052ba00575726b4f932de2270cd \
+node scripts/verify-published-release.mjs
+```
 
-- `npm ci`: passed; `npm audit --audit-level=high`: 0 vulnerabilities.
-- `npm test`: 35 unit/integration tests and 38 browser tests passed.
-- `npm run build`: passed and produced `dist/site/`.
-- `npm run build:app`: passed.
-- `cargo test --locked --manifest-path src-tauri/Cargo.toml`: passed.
-- All 25 exact commands from `.factory/claims.json` passed independently in
-  that clone. This includes `@claim:demo-isolation`, `@claim:offline-reload`,
-  `@claim:runtime-privacy`, `@claim:checkout-handoff`, and every other claim.
-- Local verifier: `.factory/qa-artifacts/polish-5/local/verify.json` reports
-  HTTP 200, no console errors, a title, `lang=en`, one h1, main, complete image
-  alternatives, and labeled buttons.
-- Live verifier: `.factory/qa-artifacts/polish-5/live/verify.json` reports
-  the same checks with no console errors after a cold production load.
-- `npm run test:live`: 11/11 passed after deployment, including production
-  metadata, 404, mobile navigation, demo isolation, checkout, CSP, keyboard,
-  and axe coverage.
-- Live Lighthouse mobile:
-  `.factory/qa-artifacts/polish-5/live/lighthouse.json` reports performance
-  99, accessibility 100, best practices 100, SEO 100; LCP 1,851 ms, CLS 0,
-  and TBT 8.5 ms.
-- Production bundle: 129.00 kB gzip JavaScript and 3.83 kB gzip CSS.
+It exits non-zero and reports the two different commit IDs. Publish a new
+version tag from the repaired candidate, wait for every platform job and the
+published-release verification job to pass, then deploy the site with links
+to that release.
 
-## Production recheck
+## Verification summary
 
-Fresh desktop and 390 × 844 screenshots are at
-`.factory/qa-artifacts/polish-5/live/f5-cold-desktop-1440x900.png` and
-`.factory/qa-artifacts/polish-5/live/f5-cold-mobile-390x844.png`.
-Both show the repaired preview wording; the production DOM check also confirms
-the old absolute heading is absent and the textbox is named “License token.”
-The README regression confirms the audience sentence names XLSX and XLSM.
+- Confirm all 25 exact commands in `.factory/claims.json`: passed.
+- Confirm `npm test`: 35 unit/integration and 38 browser checks passed.
+- Confirm `npm run test:live`: 11 deployed checks passed.
+- Confirm `npm run build` and `npm run build:app`: passed TypeScript checking
+  and produced `dist/site/` and `dist/app/`.
+- Check `npm audit --audit-level=high`: zero vulnerabilities.
+- Confirm the web `index.html`, JavaScript, CSS, service worker, and installer
+  helpers are byte-identical to the candidate build.
+- Check the one-click demo, normal workbook flow, boundaries, recovery text,
+  exports, licensing behavior, offline reload, and demo isolation: passed.
+- Confirm desktop/mobile axe: zero serious or critical findings. Keyboard,
+  visible focus, 44 px controls, reduced motion, and 390 px layout passed.
+- Confirm privacy: the complete demo flow contacted only the product origin.
+  License verification allowed 30 requests and returned 429 plus
+  `Retry-After: 3` on request 31.
+- Confirm fresh mobile Lighthouse: 99 performance, 100 accessibility,
+  100 best practices, 100 SEO; LCP 1.79 s and CLS 0.
+- Check the published DEB checksum: it matches `SHA256SUMS`, but the package
+  belongs to the older release commit and does not close the finding.
 
-## Known gaps and next steps
+## Environment note
 
-None. The static repair is deployed and every current or earlier review
-finding is mapped with live evidence in `.factory/polish-5.md`.
+Check `cargo test --locked --manifest-path src-tauri/Cargo.toml`: this worker
+cannot complete it because `glib-2.0.pc` is not installed. The release workflow
+installs the required GTK/WebKit build packages. This environment limitation
+is not the reason for the FAIL verdict.
+
+## Evidence
+
+See `.factory/verification-15.md` and
+`.factory/qa-evidence/verification-15/` for the full results and screenshots.
