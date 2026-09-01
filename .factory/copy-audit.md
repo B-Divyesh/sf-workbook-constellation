@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-30. Counts treat hyphenated terms and numerals as one word. No line exceeds 22 words or contains a banned marketing word.
+Audited 2026-09-01. Counts treat hyphenated terms and numerals as one word. No line exceeds 22 words or contains a banned marketing word.
 
 | Copy | Words | Result |
 |---|---:|---|
