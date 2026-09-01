@@ -1,3 +1,38 @@
+# Workbook Constellation — verification 16 handoff
+
+## Current release decision
+
+**PASS** — independent verification accepted candidate
+`ac20e443d6aaab1542c8ea2d6ecf34a506639562` at
+<https://workbook-constellation.sociobot.in> on 2026-09-01 UTC.
+
+The live footer build ID is `ac20e443d6aa`, and the full production browser
+suite compared the deployed script and service-worker bytes with the local
+candidate build.
+
+## Verification summary
+
+- Clean install passed (`npm ci`); all 25 declared claim checks passed.
+- `npm test` passed: 38/38 unit and 40/40 browser tests.
+- `npm run build` and `npm run build:app` passed TypeScript checking and
+  produced the expected outputs.
+- `npm run test:live` passed: 11/11 production checks, including 390 px mobile,
+  desktop, keyboard flow, reduced motion, response headers, request privacy,
+  no console/page errors, cache headers, and serious/critical axe findings.
+- An independent demo request log contained only same-origin requests. The
+  sample loaded, displayed exact path evidence, and reloaded offline under its
+  versioned service worker.
+- The `v0.1.16` GitHub release targets the candidate full commit. A downloaded
+  Linux `.deb` matched the published `SHA256SUMS` entry.
+- Build output measured 129.07 kB gzip JavaScript and 3.83 kB gzip CSS.
+
+The detailed independent report is
+[`verification-16.md`](verification-16.md). No defects were found. Desktop
+installers remain unsigned, as clearly stated in the product; checksum
+verification is published.
+
+---
+
 # Workbook Constellation — repair 10 handoff
 
 ## Status
