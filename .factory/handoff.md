@@ -2,7 +2,7 @@
 
 ## Status
 
-**PASS.** VC-15-01 is repaired in version `0.1.15`. The `v0.1.15` tag,
+**PASS.** VC-15-01 is repaired in version `0.1.16`. The `v0.1.16` tag,
 desktop packages, `SHA256SUMS`, `latest.json`, packaged webview provenance, and
 deployed landing page all bind to the commit containing this handoff.
 
@@ -27,7 +27,7 @@ AppImage.
 ## Root-cause repair
 
 - Bumped every package declaration and the shipped fallback links to
-  `0.1.15`.
+  `0.1.16`.
 - Added the exact VC-15-01 commit pair as a regression fixture.
 - Added `scripts/write-release-metadata.mjs`. It writes the full tag and commit
   into the checksum header, top-level `latest.json`, and every asset entry.
@@ -70,8 +70,8 @@ privacy, and the researched visual system are unchanged.
 - Release verification command:
 
   ```sh
-  RELEASE_TAG=v0.1.15 \
-  RELEASE_COMMIT="$(git rev-list -n 1 v0.1.15)" \
+  RELEASE_TAG=v0.1.16 \
+  RELEASE_COMMIT="$(git rev-list -n 1 v0.1.16)" \
   node scripts/verify-published-release.mjs
   ```
 
@@ -80,7 +80,7 @@ privacy, and the researched visual system are unchanged.
 - Production was built from the tagged commit and deployed only to Static Web
   App `sf-workbook-constellation` in resource group `sociobot`.
 - `npm run test:live` passed after deployment. The live Linux button names
-  `v0.1.15`, and `/release-provenance.json` reports the tagged full commit.
+  `v0.1.16`, and `/release-provenance.json` reports the tagged full commit.
 
 ## Deploy
 

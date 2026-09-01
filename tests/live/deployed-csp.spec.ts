@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const expectedCsp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.sociobot.in https://api.github.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+const version = (JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as { version: string }).version;
 
 test('deployed CSP permits release checks and cold load has no console errors', async ({ page }) => {
   const errors: string[] = [];
@@ -14,7 +15,7 @@ test('deployed CSP permits release checks and cold load has no console errors', 
   const documentResponse = await page.goto('/', { waitUntil: 'networkidle' });
 
   expect(documentResponse?.headers()['content-security-policy']).toBe(expectedCsp);
-  await expect(page.locator('#download-action a.primary')).toHaveAttribute('href', /github\.com\/.+\/releases\/download\/v0\.1\.14\//);
+  await expect(page.locator('#download-action a.primary')).toHaveAttribute('href', new RegExp(`github\\.com/.+/releases/download/v${version.replaceAll('.', '\\.')}\/`));
   await expect(page.getByRole('button', { name: 'Check for a newer release' })).toBeVisible();
 
   for (const path of ['/demo', '/privacy', '/terms']) {
