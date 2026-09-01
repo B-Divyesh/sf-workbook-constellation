@@ -135,3 +135,23 @@ functional gap; each download is covered by SHA-256 verification.
 None for this repair. The workflow currently expects no signing secrets.
 Future macOS notarization or Windows Authenticode work requires an explicit
 workflow change and owner-provided certificates.
+
+---
+
+# Review 6 handoff
+
+**Result:** PASS — no product code was changed during this review.
+
+- Wrote `.factory/review-6.md` after a fresh phone and desktop live review.
+- Installed a clean local clone with `npm ci`; `npm run build` passed and
+  generated `dist/site/` (129.07 kB gzip JavaScript, 3.83 kB gzip CSS).
+- `npm test` passed: 38 unit checks and 40 browser checks. Every declared
+  claim command was run from the clean clone; the live checkout claim was
+  also run directly and passed.
+- Confirmed one-click sample entry, populated first demo screen, reset, exit,
+  request scope, and unchanged seeded real-mode storage.
+- Confirmed route status, link status, metadata, 404 recovery, and the prior
+  review findings in current source and live behavior.
+
+Known gaps: none identified in this review. No deployment or infrastructure
+action was taken.
