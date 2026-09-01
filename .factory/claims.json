@@ -155,7 +155,7 @@
   },
   {
     "id": "release-workflow",
-    "claim": "A version tag builds unsigned Linux, Windows, Intel macOS, and Apple silicon macOS installers, then publishes SHA-256 checksums and a latest-release manifest.",
+    "claim": "A version tag builds unsigned Linux, Windows, Intel macOS, and Apple silicon macOS installers, with the exact build commit in each app, SHA-256 checksums, and the latest-release manifest.",
     "where": "desktop download section and README",
     "test": "npm run test:unit -- --testNamePattern @claim:release-workflow",
     "sandbox": "inspect the shipped workflow and recorded completed v0.1.11 release run; assert success, matching commit, four platform targets, installer checks, SHA256SUMS, and latest.json"

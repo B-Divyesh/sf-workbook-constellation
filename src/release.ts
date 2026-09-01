@@ -3,6 +3,7 @@ import { appVersion } from './version';
 const repo = 'B-Divyesh/sf-workbook-constellation';
 const releasePage = `https://github.com/${repo}/releases`;
 const shippedVersion = `v${appVersion}`;
+const releaseCacheKey = `wc:latest-release:${shippedVersion}`;
 
 type Release = { html_url: string; assets: Array<{ name: string; browser_download_url: string }> };
 type UserAgentData = { getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string }> };
@@ -92,7 +93,7 @@ async function refreshRelease(target: HTMLElement) {
     const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
     if (!response.ok) throw new Error('release unavailable');
     const release = await response.json() as Release;
-    localStorage.setItem('wc:latest-release', JSON.stringify({ saved: Date.now(), release }));
+    localStorage.setItem(releaseCacheKey, JSON.stringify({ saved: Date.now(), release }));
     await renderRelease(target, release, 'Release details are current.');
   } catch {
     await renderRelease(target, shippedRelease, `GitHub is unavailable. Showing ${shippedVersion}.`);
@@ -102,7 +103,8 @@ async function refreshRelease(target: HTMLElement) {
 export async function loadDownload() {
   const target = document.querySelector<HTMLElement>('#download-action');
   if (!target) return;
-  const cached = localStorage.getItem('wc:latest-release');
+  localStorage.removeItem('wc:latest-release');
+  const cached = localStorage.getItem(releaseCacheKey);
   if (cached) {
     try {
       const parsed = JSON.parse(cached) as { saved: number; release: Release };
@@ -110,7 +112,7 @@ export async function loadDownload() {
         await renderRelease(target, parsed.release);
         return;
       }
-    } catch { localStorage.removeItem('wc:latest-release'); }
+    } catch { localStorage.removeItem(releaseCacheKey); }
   }
   await renderRelease(target, shippedRelease);
 }

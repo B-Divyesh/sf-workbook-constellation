@@ -49,6 +49,9 @@ jobs:
       - run: npm ci
       - name: Verify tag, commit, and package version
         run: node scripts/verify-release.mjs
+      - id: candidate
+        shell: bash
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Run unit tests
         if: matrix.platform == 'ubuntu-22.04'
         run: npm run test:unit
@@ -62,7 +65,7 @@ jobs:
         with:
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: 'Workbook Constellation ${{ env.RELEASE_TAG }}'
-          releaseBody: 'Unsigned desktop builds. Verify each download against SHA256SUMS.'
+          releaseBody: 'Unsigned desktop builds from commit ${{ steps.candidate.outputs.commit }}. Verify each download against SHA256SUMS.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
@@ -76,6 +79,8 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
       - name: Verify tag, commit, and package version
         run: node scripts/verify-release.mjs
+      - id: candidate
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Download release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,11 +90,10 @@ jobs:
       - name: Write checksums and latest manifest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_COMMIT: ${{ steps.candidate.outputs.commit }}
         run: |
-          cd release-assets
-          find . -maxdepth 1 -type f ! -name 'SHA256SUMS' ! -name 'latest.json' -printf '%f\n' | sort | xargs sha256sum > SHA256SUMS
-          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '{version:.tag_name, assets:[.assets[]|{name:.name,url:.browser_download_url}]}' > latest.json
-          gh release upload "${RELEASE_TAG}" SHA256SUMS latest.json --clobber
+          node scripts/write-release-metadata.mjs release-assets
+          gh release upload "${RELEASE_TAG}" release-assets/SHA256SUMS release-assets/latest.json --clobber
 
   verify-published-release:
     needs: manifest

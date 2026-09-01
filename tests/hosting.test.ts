@@ -37,6 +37,7 @@ describe('static deployment policy', () => {
     expect(byRoute['/assets/*']['Cache-Control']).toBe('public, max-age=31536000, immutable');
     expect(byRoute['/art/*']['Cache-Control']).toBe('public, max-age=31536000, immutable');
     expect(byRoute['/sw.js']['Cache-Control']).toBe('no-cache, no-store, must-revalidate');
+    expect(byRoute['/release-provenance.json']['Cache-Control']).toBe('no-cache, no-store, must-revalidate');
   });
 
   it('@claim:installer-safety accepts matching checksums and removes mismatching installers before launch', async () => {
@@ -144,9 +145,11 @@ describe('static deployment policy', () => {
     expect(workflow).toContain('ubuntu-22.04');
     expect(workflow).toContain('windows-latest');
     expect(workflow.match(/macos-latest/g)).toHaveLength(2);
-    expect(workflow).toContain('Unsigned desktop builds.');
+    expect(workflow).toContain('Unsigned desktop builds from commit');
     expect(workflow).toContain('SHA256SUMS');
     expect(workflow).toContain('latest.json');
+    expect(workflow).toContain('node scripts/write-release-metadata.mjs release-assets');
+    expect(workflow).toContain("releaseBody: 'Unsigned desktop builds from commit ${{ steps.candidate.outputs.commit }}.");
     expect(workflow).toContain("APPIMAGE_EXTRACT_AND_RUN: '1'");
     expect(workflow).toContain('install -y file ');
     expect(workflow.match(/ref: \$\{\{ env\.RELEASE_TAG \}\}/g)).toHaveLength(3);
@@ -253,6 +256,94 @@ describe('static deployment policy', () => {
     })).toThrow(/published v0\.1\.12 targets 97be5bbe87ef7702b26a834bae6afb8c6db8afb0, but the candidate is 621817a2a435363435b006f52c8c37bade5da74b/);
   });
 
+  it('reproduces VC-15-01 and rejects the published v0.1.14 desktop app for the repaired candidate', () => {
+    const script = new URL('../scripts/verify-published-release.mjs', import.meta.url).pathname;
+    const oldRelease = {
+      tag_name: 'v0.1.14',
+      target_commitish: '7b4183a18db325f688700c4b8d7516fb6d765ad4',
+      assets: []
+    };
+    const releaseApi = `data:application/json;base64,${Buffer.from(JSON.stringify(oldRelease)).toString('base64')}`;
+    expect(() => execFileSync(process.execPath, [script], {
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        RELEASE_TAG: 'v0.1.14',
+        RELEASE_COMMIT: 'e8aedb092ee3d052ba00575726b4f932de2270cd',
+        RELEASE_API_URL: releaseApi
+      }
+    })).toThrow(/published v0\.1\.14 targets 7b4183a18db325f688700c4b8d7516fb6d765ad4, but the candidate is e8aedb092ee3d052ba00575726b4f932de2270cd/);
+  });
+
+  it('writes the exact candidate commit into checksums, latest.json, and every asset entry', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'workbook-constellation-release-metadata-'));
+    const commit = 'c'.repeat(40);
+    try {
+      writeFileSync(join(directory, 'linux.AppImage'), 'linux bytes');
+      writeFileSync(join(directory, 'windows.msi'), 'windows bytes');
+      const output = execFileSync(process.execPath, [new URL('../scripts/write-release-metadata.mjs', import.meta.url).pathname, directory], {
+        encoding: 'utf8',
+        env: { ...process.env, RELEASE_TAG: 'v0.1.15', RELEASE_COMMIT: commit, GITHUB_REPOSITORY: 'factory/product' }
+      });
+      const checksums = readFileSync(join(directory, 'SHA256SUMS'), 'utf8');
+      const latest = JSON.parse(readFileSync(join(directory, 'latest.json'), 'utf8')) as {
+        version: string;
+        commit: string;
+        assets: Array<{ name: string; url: string; sha256: string; commit: string }>;
+      };
+      expect(output).toContain(`v0.1.15 assets at ${commit}`);
+      expect(checksums).toMatch(new RegExp(`^# Workbook Constellation v0\\.1\\.15 commit ${commit}\\n`));
+      expect(latest).toMatchObject({ version: 'v0.1.15', commit });
+      expect(latest.assets).toHaveLength(2);
+      expect(latest.assets.every(asset => asset.commit === commit && /^[a-f0-9]{64}$/.test(asset.sha256))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects latest.json when it identifies a different commit despite valid installer checksums', () => {
+    const script = new URL('../scripts/verify-published-release.mjs', import.meta.url).pathname;
+    const tag = 'v0.1.15';
+    const commit = 'a'.repeat(40);
+    const oldCommit = 'b'.repeat(40);
+    const names = [
+      'Workbook.Constellation_0.1.15_amd64.AppImage',
+      'Workbook.Constellation_0.1.15_amd64.deb',
+      'Workbook.Constellation-0.1.15-1.x86_64.rpm',
+      'Workbook.Constellation_0.1.15_x64-setup.exe',
+      'Workbook.Constellation_0.1.15_x64_en-US.msi',
+      'Workbook.Constellation_0.1.15_aarch64.dmg',
+      'Workbook.Constellation_0.1.15_x64.dmg',
+      'Workbook.Constellation_aarch64.app.tar.gz',
+      'Workbook.Constellation_x64.app.tar.gz'
+    ];
+    const dataUrl = (content: string, type = 'application/octet-stream') => `data:${type};base64,${Buffer.from(content).toString('base64')}`;
+    const installers = names.map(name => ({ name, browser_download_url: dataUrl(`candidate artifact: ${name}`) }));
+    const sums = [
+      `# Workbook Constellation ${tag} commit ${commit}`,
+      ...installers.map(asset => `${createHash('sha256').update(`candidate artifact: ${asset.name}`).digest('hex')}  ${asset.name}`)
+    ].join('\n');
+    const latest = { version: tag, commit: oldCommit, assets: installers.map(asset => ({ name: asset.name, url: asset.browser_download_url })) };
+    const release = {
+      tag_name: tag,
+      target_commitish: commit,
+      assets: [
+        { name: 'SHA256SUMS', browser_download_url: dataUrl(sums, 'text/plain') },
+        { name: 'latest.json', browser_download_url: dataUrl(JSON.stringify(latest), 'application/json') },
+        ...installers
+      ]
+    };
+    expect(() => execFileSync(process.execPath, [script], {
+      stdio: 'pipe',
+      env: {
+        ...process.env,
+        RELEASE_TAG: tag,
+        RELEASE_COMMIT: commit,
+        RELEASE_API_URL: dataUrl(JSON.stringify(release), 'application/json')
+      }
+    })).toThrow(/latest\.json identifies commit b{40}, expected a{40}/);
+  });
+
   it('verifies every release platform asset against the published checksum and CORS-safe manifest', () => {
     const script = new URL('../scripts/verify-published-release.mjs', import.meta.url).pathname;
     const tag = 'v0.1.12';
@@ -270,11 +361,20 @@ describe('static deployment policy', () => {
     ];
     const dataUrl = (content: string, type = 'application/octet-stream') => `data:${type};base64,${Buffer.from(content).toString('base64')}`;
     const installers = names.map(name => ({ name, browser_download_url: dataUrl(`candidate artifact: ${name}`) }));
-    const sums = installers.map(asset => {
+    const sums = [`# Workbook Constellation ${tag} commit ${commit}`, ...installers.map(asset => {
       const bytes = Buffer.from(`candidate artifact: ${asset.name}`);
       return `${createHash('sha256').update(bytes).digest('hex')}  ${asset.name}`;
-    }).join('\n');
-    const latest = { version: tag, assets: installers.map(asset => ({ name: asset.name, url: asset.browser_download_url })) };
+    })].join('\n');
+    const latest = {
+      version: tag,
+      commit,
+      assets: installers.map(asset => ({
+        name: asset.name,
+        url: asset.browser_download_url,
+        commit,
+        sha256: createHash('sha256').update(`candidate artifact: ${asset.name}`).digest('hex')
+      }))
+    };
     const release = {
       tag_name: tag,
       target_commitish: commit,

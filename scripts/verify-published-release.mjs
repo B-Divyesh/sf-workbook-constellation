@@ -26,15 +26,18 @@ async function responseBytes(response, label) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-function checksumMap(text) {
+function checksumManifest(text) {
   const checksums = new Map();
-  for (const line of text.trim().split(/\r?\n/)) {
+  const lines = text.trim().split(/\r?\n/);
+  const provenance = lines.shift()?.match(/^# Workbook Constellation (v\d+\.\d+\.\d+) commit ([a-f0-9]{40})$/i);
+  if (!provenance) fail('SHA256SUMS is missing exact tag and commit provenance');
+  for (const line of lines) {
     const match = line.match(/^([a-f0-9]{64}) {2}(.+)$/i);
     if (!match) fail(`SHA256SUMS contains an invalid line: ${line}`);
     if (checksums.has(match[2])) fail(`SHA256SUMS lists ${match[2]} more than once`);
     checksums.set(match[2], match[1].toLowerCase());
   }
-  return checksums;
+  return { tag: provenance[1], commit: provenance[2].toLowerCase(), checksums };
 }
 
 function sameAssetSet(expected, actual, label) {
@@ -67,16 +70,25 @@ export async function verifyPublishedRelease({ tag, commit, apiUrl, token, fetch
   }
 
   const checksumText = await responseText(await fetchImpl(checksums.browser_download_url, { headers }), 'SHA256SUMS');
-  const listedChecksums = checksumMap(checksumText);
+  const checksumManifestData = checksumManifest(checksumText);
+  if (checksumManifestData.tag !== tag || checksumManifestData.commit !== commit.toLowerCase()) {
+    fail(`SHA256SUMS identifies ${checksumManifestData.tag} at ${checksumManifestData.commit}, expected ${tag} at ${commit}`);
+  }
+  const listedChecksums = checksumManifestData.checksums;
   sameAssetSet(installers.map(asset => asset.name), listedChecksums.keys(), 'SHA256SUMS');
 
   const latest = JSON.parse(await responseText(await fetchImpl(manifest.browser_download_url, { headers }), 'latest.json'));
   if (latest.version !== tag || !Array.isArray(latest.assets)) fail('latest.json has an invalid version or asset list');
+  if (latest.commit !== commit) fail(`latest.json identifies commit ${latest.commit ?? 'none'}, expected ${commit}`);
+  const manifestAssets = new Map(latest.assets.map(asset => [asset.name, asset]));
   const manifestUrls = new Map(latest.assets.map(asset => [asset.name, asset.url]));
   sameAssetSet(installers.map(asset => asset.name), manifestUrls.keys(), 'latest.json');
 
   for (const asset of installers) {
+    const manifestAsset = manifestAssets.get(asset.name);
     if (manifestUrls.get(asset.name) !== asset.browser_download_url) fail(`latest.json URL for ${asset.name} differs from the release metadata`);
+    if (manifestAsset.commit !== commit) fail(`latest.json asset ${asset.name} identifies commit ${manifestAsset.commit ?? 'none'}, expected ${commit}`);
+    if (manifestAsset.sha256 !== listedChecksums.get(asset.name)) fail(`latest.json checksum for ${asset.name} differs from SHA256SUMS`);
     const bytes = await responseBytes(await fetchImpl(asset.browser_download_url, { headers }), asset.name);
     const actual = createHash('sha256').update(bytes).digest('hex');
     if (actual !== listedChecksums.get(asset.name)) fail(`${asset.name} does not match SHA256SUMS`);

@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { once } from 'node:events';
+import { execFileSync } from 'node:child_process';
 
 const apiUrl = 'https://api.github.com/repos/B-Divyesh/sf-workbook-constellation/releases/latest';
 
@@ -43,12 +44,38 @@ test('keeps the shipped release available when a newer-release check fails', asy
   }));
 
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.14/);
+  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.15/);
   await page.getByRole('button', { name: 'Check for a newer release' }).click();
 
-  await expect(page.getByText('GitHub is unavailable. Showing v0.1.14.')).toBeVisible();
-  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /releases\/tag\/v0\.1\.14$/);
+  await expect(page.getByText('GitHub is unavailable. Showing v0.1.15.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /See all release files/ })).toHaveAttribute('href', /releases\/tag\/v0\.1\.15$/);
   expect(pageErrors).toEqual([]);
+});
+
+test('does not reuse cached download metadata from the older release', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('wc:latest-release', JSON.stringify({
+    saved: Date.now(),
+    release: {
+      html_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/tag/v0.1.14',
+      assets: [{
+        name: 'Workbook.Constellation_0.1.14_amd64.AppImage',
+        browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.14/Workbook.Constellation_0.1.14_amd64.AppImage'
+      }, {
+        name: 'SHA256SUMS',
+        browser_download_url: 'https://github.com/B-Divyesh/sf-workbook-constellation/releases/download/v0.1.14/SHA256SUMS'
+      }]
+    }
+  })));
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Download for Linux (external)' })).toHaveAttribute('href', /v0\.1\.15/);
+});
+
+test('embeds the exact candidate commit in the site and packaged webview payload', async ({ page }) => {
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  await page.goto('/');
+  await expect(page.locator('footer')).toContainText(`Build ${commit.slice(0, 12)}`);
+  const provenance = await page.evaluate(async () => (await fetch('/release-provenance.json')).json());
+  expect(provenance).toEqual({ version: 'v0.1.15', commit });
 });
 
 test('selects Intel and Apple silicon macOS disk images independently', async ({ browser }) => {

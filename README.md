@@ -30,7 +30,7 @@ Build the desktop app with:
 npm run tauri build
 ```
 
-Desktop releases are built by `.github/workflows/release.yml`, not on the factory worker. A `v*` tag creates unsigned macOS, Windows, and Linux installers, then publishes `SHA256SUMS` and `latest.json`.
+Desktop releases are built by `.github/workflows/release.yml`, not on the factory worker. A `v*` tag creates unsigned macOS, Windows, and Linux installers. Each app embeds the build commit. `SHA256SUMS` and `latest.json` name that same commit.
 
 After a release exists, the website offers detected-platform downloads and published checksums. Both helper commands remove downloads with a mismatched SHA-256 checksum. On Linux, the shell helper marks the AppImage executable and launches it:
 

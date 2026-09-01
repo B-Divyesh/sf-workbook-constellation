@@ -6,7 +6,7 @@ import { captureLicense, checkoutUrl, hasPaidLicense, hasSavedLicense, saveLicen
 import type { Audit, SheetEdge } from './types';
 import { loadDownload } from './release';
 import { escapeHtml as text } from './html';
-import { appVersion } from './version';
+import { appVersion, buildCommit } from './version';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let audit: Audit | null = null;
@@ -71,7 +71,7 @@ function shell(content: string) {
   ${isDemo ? `<aside class="demo-bar" aria-label="Demo mode"><span><strong>Demo</strong> — sample data, nothing is saved</span><div><button data-action="reset-demo">Reset demo</button><button data-action="leave-demo">Start for real</button></div></aside>` : ''}
   <header class="site-header"><a class="wordmark" href="/" data-link>${icon}<span>Workbook<br>Constellation</span></a><nav aria-label="Main navigation"><a href="/?demo=1" data-link>Demo</a><a href="/#how">How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>
   ${content}
-  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version ${appVersion} · Original generated artwork</p></footer>`;
+  <footer><p><strong>Workbook Constellation</strong><br>Map workbook formulas before you change a cell.</p><nav aria-label="Footer navigation"><a href="/privacy" data-link>Privacy</a><a href="/terms" data-link>Terms</a><a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external)</span></a></nav><p>Version ${appVersion} · Build ${buildCommit.slice(0, 12)} · Original generated artwork</p></footer>`;
 }
 
 function landing() {
